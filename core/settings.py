@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     OPEN_AI_API_KEY: str = Field(env="OPEN_AI_API_KEY")
     TELEGRAM_BOT_API_TOKEN: str = Field(env="TELEGRAM_BOT_API_TOKEN")
-    OPEN_AI_ENGINE: str = Field(env="OPEN_AI_ENGINE")
+    OPEN_AI_MODEL: str = Field(env="OPEN_AI_MODEL")
     TELEGRAM_WEBHOOK_URL: str = Field(env="TELEGRAM_WEBHOOK_URL")
 
     class Config:

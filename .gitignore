@@ -1,3 +1,4 @@
 .env
 .idea
 poetry.lock
+google_service_credentials.json
