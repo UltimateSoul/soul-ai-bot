@@ -1,0 +1,22 @@
+{
+    "Chat": {
+        "id": 123,
+        "title": "Chat title",
+        "type": "private",
+        "messages": [
+            {
+                "id": 123,
+                "user": "username",
+                "first_name": "first_name",
+                "last_name": "last_name",
+                "text": "message text"
+            },
+            {
+                "id": 123,
+                "username": "username",
+                "first_name": "first_name",
+                "last_name": "last_name"
+            }
+        ]
+    }
+}
