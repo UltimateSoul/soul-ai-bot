@@ -2,10 +2,11 @@ from fastapi import FastAPI, Request
 import telegram
 
 from core import commands
+from core.lifespan import lifespan
 from core.open_ai import generate_response
 from core.settings import Settings
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 settings = Settings()
 bot = telegram.Bot(settings.TELEGRAM_BOT_API_TOKEN)
 

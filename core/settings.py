@@ -9,6 +9,14 @@ from pydantic import BaseSettings, Field
 env_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
 
 
+class MemoryStoreSettings(BaseSettings):
+    """MemoryStore settings"""
+
+    HOST: str = Field(env="MEMORYSTORE_HOST")
+    PORT: int = Field(env="MEMORYSTORE_PORT")
+    DB: int = Field(env="MEMORYSTORE_DB")
+
+
 class Settings(BaseSettings):
     """Application settings"""
 
@@ -18,6 +26,7 @@ class Settings(BaseSettings):
     TELEGRAM_WEBHOOK_URL: str = Field(env="TELEGRAM_WEBHOOK_URL")
     BOT_USERNAME: str = Field(env="BOT_USERNAME")
     GOOGLE_CLOUD_PROJECT: str = Field(env="GOOGLE_CLOUD_PROJECT")
+    MEMORY_STORE_SETTINGS: MemoryStoreSettings = MemoryStoreSettings()
 
     class Config:
         env_file = env_file_path  # Load settings from .env file

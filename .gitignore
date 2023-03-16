@@ -2,3 +2,4 @@
 .idea
 poetry.lock
 google_service_credentials.json
+git_auth_script.sh

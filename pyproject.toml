@@ -17,6 +17,7 @@ tiktoken = "^0.3.1"
 backoff = "^2.2.1"
 google-cloud-datastore = "^2.15.0"
 python-dotenv = "^1.0.0"
+redis = "^4.5.1"
 
 
 [build-system]
