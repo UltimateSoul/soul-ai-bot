@@ -19,7 +19,7 @@ logger.addHandler(handler)
 redis_client = redis.Redis(host=settings.MEMORY_STORE_SETTINGS.HOST,
                            port=settings.MEMORY_STORE_SETTINGS.PORT)
 
-KEY_EVENT = "__keyevent@0__:expired"
+EXPIRED_KEY_EVENT = "__keyevent@0__:expired"
 
 
 def expire_event_handler(message):  # pragma: no cover
@@ -63,7 +63,7 @@ def save_user_session_to_datastore(chat_id: str, data: dict, datastore_manager: 
 logger.info("Start listening to Redis")
 pubsub = redis_client.pubsub()
 logger.info("Subscribing to Redis")
-pubsub.psubscribe(**{KEY_EVENT: expire_event_handler})
+pubsub.psubscribe(**{EXPIRED_KEY_EVENT: expire_event_handler})
 logger.info("Running Redis in thread")
 pubsub.run_in_thread(sleep_time=0.01)
 logger.info("Done")
