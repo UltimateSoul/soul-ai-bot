@@ -41,7 +41,9 @@ def expire_event_handler(message):  # pragma: no cover
                 save_user_session_to_datastore(chat_id, data, datastore_manager)
                 ...  # ToDo: save to the Datastore
         # Once we got to know the value we remove it from Redis and do whatever required
+        logger.debug(f"Deleting used data from Redis: {redis_key}.")
         redis_client.delete(redis_key)
+        logger.debug(f"Data were successfully deleted from Redis: {redis_key}.")
     except Exception as exp:
         logger.debug("Got an exception: ", exp)
 
@@ -49,8 +51,9 @@ def expire_event_handler(message):  # pragma: no cover
 def save_chat_session_to_datastore(data: dict, datastore_manager: DatastoreManager):
     """Saves the chat_session object to the Datastore"""
     logger.debug("Saving chat session to the Datastore: ", data)
-    _, _, created = datastore_manager.update_or_create_chat_entity(data)
-    logger.debug("Data were successfully saved to the datastore", data)
+    chat, key, created = datastore_manager.update_or_create_chat_entity(data)
+    logger.debug(f"Data were successfully saved to the datastore. Data was created: {created}."
+                 f" Chat: {chat}. Key: {key}.")
 
 
 def save_user_session_to_datastore(chat_id: str, data: dict, datastore_manager: DatastoreManager):

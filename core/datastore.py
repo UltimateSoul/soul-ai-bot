@@ -46,12 +46,13 @@ class DatastoreManager:
             if not chat_entity:
                 is_created = True
                 chat_entity = datastore.Entity(chat_key)
-                chat_entity.update({
-                    'chat_id': chat_id,
-                    'current_model': ChatModel.CHAT_GPT_3_5_TURBO_0301,
-                    'messages': [message]
-                })
 
+            chat_entity.update({
+                'chat_id': chat_id,
+                'current_model': ChatModel.CHAT_GPT_3_5_TURBO_0301,
+                'messages': [message]
+            })
+            self.client.put(chat_entity)
             return chat_entity, chat_key, is_created
 
     def update_or_create_chat_entity(self, data: dict) -> t.Tuple[datastore.Entity, Key, bool]:
@@ -69,6 +70,7 @@ class DatastoreManager:
             if not chat_entity:
                 is_created = True
                 chat_entity = datastore.Entity(chat_key)
-                chat_entity.update(data)
 
+            chat_entity.update(data)
+            self.client.put(chat_entity)
             return chat_entity, chat_key, is_created

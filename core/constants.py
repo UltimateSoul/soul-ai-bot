@@ -4,7 +4,7 @@ This module contains constants used throughout the application.
 import enum
 
 MINUTE = 60
-TWO_MINUTES = 2 * MINUTE
+TWO_MINUTES = 10
 EXPIRATION_TIME = TWO_MINUTES
 
 
