@@ -3,3 +3,8 @@
 poetry.lock
 google_service_credentials.json
 git_auth_script.sh
+core/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

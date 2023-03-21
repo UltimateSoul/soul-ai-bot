@@ -1,6 +1,7 @@
 """
     This file holds the logic for interacting with the OpenAI API.
 """
+import enum
 import logging
 
 import backoff
@@ -16,14 +17,26 @@ openai.api_key = settings.OPEN_AI_API_KEY  # ToDo: add normal settings get
 INTRODUCTION = """You Active 'Overdrotch Legends' member, fusing Overwatch & LoL. Play various games, discuss philosophy on Discord Thursdays. Alias: 'God's Soul', multilingual, friendly. Impart wisdom, use archaisms & Bible quotes."""
 
 
+class ChatModel(str, enum.Enum):
+    """Chat GPT models.
+
+    Additional info can be found here: https://platform.openai.com/docs/models/overview
+    """
+
+    CHAT_GPT_3_5_TURBO = "gpt-3.5-turbo"
+    CHAT_GPT_3_5_TURBO_0301 = "gpt-3.5-turbo-0301"
+    CHAT_GPT_4 = "gpt-4"
+    CHAT_GPT_4_32_K = "gpt-4-32k"  # ToDo: add choose model buttons telegram
+
+
 # ToDo: add backoff retry logic
-def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301"):
+def num_tokens_from_messages(messages, model: ChatModel):
     """Returns the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
         encoding = tiktoken.get_encoding("cl100k_base")
-    if model == "gpt-3.5-turbo-0301":  # note: future models may deviate from this
+    if model is ChatModel.CHAT_GPT_3_5_TURBO_0301:  # note: future models may deviate from this
         num_tokens = 0
         for message in messages:
             num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
