@@ -1,12 +1,15 @@
 import logging
+import typing as t
 
+from google.cloud import datastore
 from telegram import Update
 from telegram.constants import ChatType
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
-from core.chat_session import ChatSession
+from core.constants import TelegramMessages
+from core.sessions import ChatSession, UserSession
 from core.commands import ASK_KNOWLEDGE_GOD
-from core.open_ai import generate_response
+from core.open_ai import generate_response, num_tokens_from_messages, ChatModel, UserTokenManager
 from core.settings import Settings
 
 logging.basicConfig(
@@ -23,28 +26,48 @@ class SoulAIBot:
 
     async def ask_knowledge_god(self, update: Update, context: ContextTypes.DEFAULT_TYPE, need_to_split=True,
                                 input_text=None):
-        chat_id = update.effective_chat.id
-        if chat_id != settings.MANAGED_CHAT_ID:
-            await context.bot.send_message(chat_id=update.effective_chat.id,
-                                           text='Sorry. That bot is not working for you. '
-                                                'You can ask @ultimatesoul to change that')
-            return
-        if need_to_split and not input_text:
-            input_text = ' '.join(update.message.text.split()[1:])
-        if not input_text:
-            input_text = update.message.text
-        logging.info("Input text: {}".format(input_text))
-        chat_session = ChatSession(chat_id=update.effective_chat.id, update=update, context=context)
-        chat = chat_session.get()
-        messages = chat.get('messages')
-        response = await generate_response(messages=messages,
-                                           model=chat.get('current_model'),
-                                           max_tokens=chat.get('max_tokens'),
-                                           temperature=chat.get('temperature'))
-        # ToDo: count here the number of tokens per user
-        response = "Hello, world!"
-        logging.info("Response: {}".format(response))
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
+        try:
+            chat_id = update.effective_chat.id
+            if chat_id != settings.MANAGED_CHAT_ID:
+                await context.bot.send_message(chat_id=update.effective_chat.id,
+                                               text='Sorry. That bot is not working for you. '
+                                                    'You can ask @ultimatesoul to change that')
+                return
+            if need_to_split and not input_text:
+                input_text = ' '.join(update.message.text.split()[1:])
+            if not input_text:
+                input_text = update.message.text
+            logging.info("Input text: {}".format(input_text))
+            chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
+            user_session = UserSession(entity_id=update.effective_user.id, update=update)
+            chat: t.Union[dict, datastore.Entity] = chat_session.get()
+            user: t.Union[dict, datastore.Entity] = user_session.get()
+            messages = [chat.get('system_message')] + chat.get('messages')
+            model: ChatModel = chat.get('current_model')
+            messages_tokens_num = num_tokens_from_messages(chat.get('messages'), model=model)
+            if messages_tokens_num > chat.get('max_tokens'):
+                ...  # ToDo: add truncation of first messages
+            user_manager = UserTokenManager(user=user, chat=chat)
+            is_user_allowed_to_talk = user_manager.can_user_ask_ai()
+            if is_user_allowed_to_talk:
+
+                response = await generate_response(messages=messages,
+                                                   model=chat.get('current_model'),
+                                                   max_tokens=chat.get('max_tokens'),
+                                                   temperature=chat.get('temperature'))
+
+                logging.info("Response: {}".format(response))
+            else:
+                response = TelegramMessages.construct_message(
+                    message=TelegramMessages.LOW_BALANCE,
+                    balance=user.get('current_balance'),
+                    price=user_manager.dollars_for_prompt * 100
+                )
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
+        except Exception as e:
+            logging.error(e)
+            response = "I'm sorry, I have some problems with my brain. Please, try again later."
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
 
     async def ai_dialogue(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         effective_chat = update.effective_chat

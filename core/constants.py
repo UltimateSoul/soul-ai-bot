@@ -21,3 +21,12 @@ class RedisPrefixes(str, enum.Enum):
 
     CHAT_SESSION = "chat_session"
     USER_SESSION = "user_session"
+
+
+class TelegramMessages:
+    LOW_BALANCE = "You have low balance. Please, top up your account. Your balance is {balance} cents, " \
+                  "but the price of the required tokens input is {price} cents."
+
+    @staticmethod
+    def construct_message(message: str, **kwargs) -> str:
+        return message.format(**kwargs)

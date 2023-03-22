@@ -13,7 +13,7 @@ from core.settings import Settings
 
 settings = Settings()
 CHAT_KIND = "Chat"
-UserAccount = "UserAccount"
+USER_ACCOUNT_KIND = "UserAccount"
 
 
 class DatastoreManager:
@@ -30,7 +30,7 @@ class DatastoreManager:
 
         with self.client.transaction():
             user_key = self.client.key(
-                UserAccount, user_id
+                USER_ACCOUNT_KIND, user_id
             )
             user_entity = self.client.get(user_key)
 
@@ -40,6 +40,7 @@ class DatastoreManager:
                 user_entity.update({
                     "user_id": user_id,
                     "is_admin": False,
+                    "current_balance": 200,  # default new user balance is 200 cents or 2 dollars
                     "model_token_usage": {
                         ChatModel.CHAT_GPT_4_8K.value: {
                             "prompt": 0,
@@ -58,6 +59,27 @@ class DatastoreManager:
                     }
                 })
                 self.client.put(user_entity)
+            return user_entity, user_key, is_created
+
+    def update_or_create_user_account_entity(self, data: dict) -> t.Tuple[datastore.Entity, Key, bool]:
+        """Creates a new user account entity in the Datastore UserAccount kind."""
+
+        user_id = data.get("user_id")
+        is_created = False
+
+        with self.client.transaction():
+            user_key = self.client.key(
+                USER_ACCOUNT_KIND, user_id
+            )
+            user_entity = self.client.get(user_key)
+
+            if not user_entity:
+                is_created = True
+                user_entity = datastore.Entity(user_key)
+                user_entity.update(data)
+
+            # ToDo: modify
+            self.client.put(user_entity)
             return user_entity, user_key, is_created
 
     def get_or_create_chat_entity(self, update: Update) -> t.Tuple[datastore.Entity, Key, bool]:
@@ -85,12 +107,11 @@ class DatastoreManager:
                     "current_model": ChatModel.CHAT_GPT_3_5_TURBO_0301,
                     "max_tokens": DEFAULT_MAX_TOKENS,
                     "temperature": DEFAULT_MODEL_TEMPERATURE,
-                    "system_message": [
-                        {
-                            "role": "system",
-                            "content": intro_system_message
-                        }
-                    ],
+                    "system_message": {
+                        "role": "system",
+                        "content": intro_system_message
+                    }
+                    ,
                     "messages": [
                         {
                             "role": "user",
