@@ -107,7 +107,7 @@ class UserTokenManager:
         return current_balance >= dollars * 100  # convert dollars to cents
 
 
-def num_tokens_from_messages(messages: t.List[t.Dict[str: str]], model: ChatModel = ChatModel.CHAT_GPT_3_5_TURBO_0301):
+def num_tokens_from_messages(messages: t.List[t.Dict[str, str]], model: ChatModel = ChatModel.CHAT_GPT_3_5_TURBO_0301):
     """Returns the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)
@@ -153,11 +153,11 @@ def num_tokens_from_messages(messages: t.List[t.Dict[str: str]], model: ChatMode
     backoff_log_level=logging.DEBUG,
 )
 async def generate_response(messages: list[dict],
-                            model: ChatModel = ChatModel.CHAT_GPT_3_5_TURBO_0301,
+                            model: ChatModel = ChatModel.CHAT_GPT_3_5_TURBO_0301.value,
                             max_tokens=DEFAULT_MAX_TOKENS,
                             temperature=DEFAULT_MODEL_TEMPERATURE):
     response = openai.ChatCompletion.create(
-        model=model.value,  # The name of the OpenAI chatbot model to use
+        model=model,  # The name of the OpenAI chatbot model to use
         messages=messages,  # The conversation history up to this point, as a list of dictionaries
         max_tokens=max_tokens,  # The maximum number of tokens (words or subwords) in the generated response
         stop=None,  # The stopping sequence for the generated response, if any (not used here)
@@ -170,4 +170,4 @@ async def generate_response(messages: list[dict],
             return choice.text
 
     # If no response with text is found, return the first response's content (which may be empty)
-    return response.choices[0].message.content
+    return response

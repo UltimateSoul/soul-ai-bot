@@ -28,7 +28,7 @@ class Session:
         self.update = update
 
     def set(self, entity: dict):
-        logger.debug(f"Setting {self.__name__} in Redis.")
+        logger.debug(f"Setting {type(self).__name__} in Redis.")
         """The first key value pair is without the expiration time, it will be deleted afterwards in 
         listener.pu functionality"""
         redis_client.set(self.redis_key, json.dumps(entity))
@@ -44,7 +44,7 @@ class Session:
         redis_client.delete(self.redis_key)
 
     def __repr__(self):
-        return f"{self.__class__.__name__} - ({self._id})"
+        return f"{type(self).__name__} - ({self._id})"
 
     __str__ = __repr__
 
@@ -59,9 +59,12 @@ class ChatSession(Session):
         chat: str = redis_client.get(self.redis_key)
         if chat:
             dict_chat: dict = json.loads(chat)
+            user_name = f"{self.update.effective_user.first_name} {self.update.effective_user.last_name}"
+            if not user_name:
+                user_name = self.update.effective_user.username
             new_message = {
-                'user_id': self.update.effective_user.id,
-                'text': f"{self.update.effective_user.username} says:{self.update.effective_message.text}"
+                'role': 'user',
+                'content': f"{user_name} says:{self.update.effective_message.text}"
             }
             dict_chat["messages"].append(new_message)
             self.set(dict_chat)

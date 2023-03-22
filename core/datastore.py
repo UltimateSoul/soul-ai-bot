@@ -5,8 +5,7 @@ import typing as t
 
 from google.cloud import datastore
 from google.cloud.datastore import Key
-from telegram import Update, Message
-from telegram.ext import ContextTypes
+from telegram import Update
 
 from core.open_ai import ChatModel, BASIC_INTRODUCTION, OVER_INTRODUCTION, DEFAULT_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE
 from core.settings import Settings
@@ -115,7 +114,7 @@ class DatastoreManager:
                     "messages": [
                         {
                             "role": "user",
-                            "text": f"{user_name} says:{update.effective_message.text}"
+                            "content": f"{user_name} says:{update.effective_message.text}"
                         }
                     ]
                 })

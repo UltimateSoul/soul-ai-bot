@@ -28,7 +28,8 @@ class SoulAIBot:
                                 input_text=None):
         try:
             chat_id = update.effective_chat.id
-            if chat_id != settings.MANAGED_CHAT_ID:
+            if str(chat_id) not in [settings.MANAGED_CHAT_ID, settings.SUPERUSER_CHAT_ID]:
+                # ToDo: change after production
                 await context.bot.send_message(chat_id=update.effective_chat.id,
                                                text='Sorry. That bot is not working for you. '
                                                     'You can ask @ultimatesoul to change that')
@@ -57,15 +58,17 @@ class SoulAIBot:
                                                    temperature=chat.get('temperature'))
 
                 logging.info("Response: {}".format(response))
+                response = response.choices[0].message.content
             else:
                 response = TelegramMessages.construct_message(
                     message=TelegramMessages.LOW_BALANCE,
                     balance=user.get('current_balance'),
                     price=user_manager.dollars_for_prompt * 100
                 )
+                # ToDo: calculate price for prompt and completion price and save it to the user account entity
             await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
         except Exception as e:
-            logging.error(e)
+            logging.exception('During ask_knowledge_god something went wrong')
             response = "I'm sorry, I have some problems with my brain. Please, try again later."
             await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
 
