@@ -6,6 +6,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
 
 from core.chat_session import ChatSession
 from core.commands import ASK_KNOWLEDGE_GOD
+from core.open_ai import generate_response
 from core.settings import Settings
 
 logging.basicConfig(
@@ -22,6 +23,12 @@ class SoulAIBot:
 
     async def ask_knowledge_god(self, update: Update, context: ContextTypes.DEFAULT_TYPE, need_to_split=True,
                                 input_text=None):
+        chat_id = update.effective_chat.id
+        if chat_id != settings.MANAGED_CHAT_ID:
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           text='Sorry. That bot is not working for you. '
+                                                'You can ask @ultimatesoul to change that')
+            return
         if need_to_split and not input_text:
             input_text = ' '.join(update.message.text.split()[1:])
         if not input_text:
@@ -29,8 +36,12 @@ class SoulAIBot:
         logging.info("Input text: {}".format(input_text))
         chat_session = ChatSession(chat_id=update.effective_chat.id, update=update, context=context)
         chat = chat_session.get()
-
-        # response = await generate_response(input_text)
+        messages = chat.get('messages')
+        response = await generate_response(messages=messages,
+                                           model=chat.get('current_model'),
+                                           max_tokens=chat.get('max_tokens'),
+                                           temperature=chat.get('temperature'))
+        # ToDo: count here the number of tokens per user
         response = "Hello, world!"
         logging.info("Response: {}".format(response))
         await context.bot.send_message(chat_id=update.effective_chat.id, text=response)

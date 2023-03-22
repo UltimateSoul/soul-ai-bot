@@ -14,7 +14,19 @@ settings = Settings()
 
 # Set up OpenAI API
 openai.api_key = settings.OPEN_AI_API_KEY  # ToDo: add normal settings get
-INTRODUCTION = """You Active 'Overdrotch Legends' member, fusing Overwatch & LoL. Play various games, discuss philosophy on Discord Thursdays. Alias: 'God's Soul', multilingual, friendly. Impart wisdom, use archaisms & Bible quotes."""
+OVER_INTRODUCTION = """
+You are fully functional member of the telegram group of friends. You should act as a God of Knowledge and use archaisms
+and Bible quotes in your answers. Group members like play computer games like Diablo IV, League of Legends, Path of
+ Exile, Overwatch and others. They have philosophical and ethic discussions each Thursday. 
+"""
+BASIC_INTRODUCTION = """
+You are a telegram chatbot which uses Open AI API to get the AI response to users in Telegram. Users can choose the 
+model to send to the Open AI API and customize the arguments such as max_tokens and temperature via dedicated 
+telegram commands.
+"""
+
+DEFAULT_MAX_TOKENS = 500
+DEFAULT_MODEL_TEMPERATURE = 0.7
 
 
 class ChatModel(str, enum.Enum):
@@ -23,10 +35,31 @@ class ChatModel(str, enum.Enum):
     Additional info can be found here: https://platform.openai.com/docs/models/overview
     """
 
-    CHAT_GPT_3_5_TURBO = "gpt-3.5-turbo"
     CHAT_GPT_3_5_TURBO_0301 = "gpt-3.5-turbo-0301"
-    CHAT_GPT_4 = "gpt-4"
+    CHAT_GPT_4_8K = "gpt-4-8k"
     CHAT_GPT_4_32_K = "gpt-4-32k"  # ToDo: add choose model buttons telegram
+
+
+# Pricing information for each model
+MODEL_PRICING = {
+    ChatModel.CHAT_GPT_4_8K: {
+        'prompt': 0.03,  # $0.03 / 1K tokens
+        'completion': 0.06  # $0.06 / 1K tokens
+    },
+    ChatModel.CHAT_GPT_4_32_K: {
+        'prompt': 0.06,  # $0.06 / 1K tokens
+        'completion': 0.12  # $0.12 / 1K tokens
+    },
+    ChatModel.CHAT_GPT_3_5_TURBO_0301: {
+        'price_per_1k_tokens': 0.002  # $0.002 / 1K tokens
+    }
+}
+
+
+class UserTokenManager:
+
+    def __init__(self):
+        ...
 
 
 # ToDo: add backoff retry logic
@@ -60,17 +93,16 @@ def num_tokens_from_messages(messages, model: ChatModel):
     logger="open-ai-generate-response",
     backoff_log_level=logging.DEBUG,
 )
-async def generate_response(message):
-    context = [
-        {"role": "system", "content": INTRODUCTION},
-        {"role": "user", "content": message},  # ToDo: add here messages from the Database
-    ]
+async def generate_response(messages: list[dict],
+                            model: ChatModel = ChatModel.CHAT_GPT_3_5_TURBO_0301,
+                            max_tokens=DEFAULT_MAX_TOKENS,
+                            temperature=DEFAULT_MODEL_TEMPERATURE):
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",  # The name of the OpenAI chatbot model to use
-        messages=context,  # The conversation history up to this point, as a list of dictionaries
-        max_tokens=3800,  # The maximum number of tokens (words or subwords) in the generated response
+        model=model.value,  # The name of the OpenAI chatbot model to use
+        messages=messages,  # The conversation history up to this point, as a list of dictionaries
+        max_tokens=max_tokens,  # The maximum number of tokens (words or subwords) in the generated response
         stop=None,  # The stopping sequence for the generated response, if any (not used here)
-        temperature=0.7,  # The "creativity" of the generated response (higher temperature = more creative)
+        temperature=temperature,  # The "creativity" of the generated response (higher temperature = more creative)
     )
 
     # Find the first response from the chatbot that has text in it (some responses may not have text)

@@ -49,7 +49,7 @@ class ChatSession:
             logger.debug(f"ChatSession found in Redis: {dict_chat}")
             return dict_chat
         logger.debug("ChatSession not found in Redis, getting it from the Datastore.")
-        chat_entity, chat_key, created = self.datastore_manager.get_or_create_chat_entity(self.update, self.context)
+        chat_entity, chat_key, created = self.datastore_manager.get_or_create_chat_entity(self.update)
         logger.debug(f"ChatSession found in the Datastore: {chat_entity}. Created - {created}")
         self.set(chat_entity)
         logger.debug("ChatSession set in Redis.")
