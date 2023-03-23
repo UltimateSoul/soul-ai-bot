@@ -1,7 +1,6 @@
 """
     This file holds the logic for interacting with the OpenAI API.
 """
-import enum
 import logging
 import typing as t
 
@@ -9,9 +8,10 @@ import backoff
 import openai
 import tiktoken
 
-from google.cloud import datastore
 
+from core.models import UserAccount, Chat
 from core.settings import Settings
+from core.constants import ChatModel, THOUSAND, MODEL_PRICING, DEFAULT_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -20,58 +20,14 @@ settings = Settings()
 
 # Set up OpenAI API
 openai.api_key = settings.OPEN_AI_API_KEY  # ToDo: add normal settings get
-OVER_INTRODUCTION = """
-You are fully functional member of the telegram group of friends. You should act as a God of Knowledge and use archaisms
-and Bible quotes in your answers. Group members like play computer games like Diablo IV, League of Legends, Path of
- Exile, Overwatch and others. They have philosophical and ethic discussions each Thursday. 
-"""
-BASIC_INTRODUCTION = """
-You are a telegram chatbot which uses Open AI API to get the AI response to users in Telegram. Users can choose the 
-model to send to the Open AI API and customize the arguments such as max_tokens and temperature via dedicated 
-telegram commands.
-"""
-
-DEFAULT_MAX_TOKENS = 500
-DEFAULT_MODEL_TEMPERATURE = 0.7
-THOUSAND = 1_000
-
-
-class ChatModel(str, enum.Enum):
-    """Chat GPT models.
-
-    Additional info can be found here: https://platform.openai.com/docs/models/overview
-    """
-
-    CHAT_GPT_3_5_TURBO = "gpt-3.5-turbo"
-    CHAT_GPT_3_5_TURBO_0301 = "gpt-3.5-turbo-0301"
-    CHAT_GPT_4 = "gpt-4"
-    CHAT_GPT_4_0314 = "gpt-4-0314"
-    CHAT_GPT_4_8K = "gpt-4-8k"
-    CHAT_GPT_4_32_K = "gpt-4-32k"  # ToDo: add choose model buttons telegram
-
-
-# Pricing information for each model
-MODEL_PRICING = {
-    ChatModel.CHAT_GPT_4_8K: {
-        'prompt': 0.03,  # $0.03 / 1K tokens
-        'completion': 0.06  # $0.06 / 1K tokens
-    },
-    ChatModel.CHAT_GPT_4_32_K: {
-        'prompt': 0.06,  # $0.06 / 1K tokens
-        'completion': 0.12  # $0.12 / 1K tokens
-    },
-    ChatModel.CHAT_GPT_3_5_TURBO_0301: {
-        'price_per_1k_tokens': 0.002  # $0.002 / 1K tokens
-    }
-}
 
 
 class UserTokenManager:
 
-    def __init__(self, user: t.Union[dict, datastore.Entity], chat: t.Union[dict, datastore.Entity]):
-        self.user = user
+    def __init__(self, user_account: UserAccount, chat: Chat):
+        self.user_account = user_account
         self.chat = chat
-        self.model = chat.get("model", ChatModel.CHAT_GPT_3_5_TURBO_0301)
+        self.model = chat.current_model
         if self.model in [ChatModel.CHAT_GPT_4_8K, ChatModel.CHAT_GPT_4_32_K]:
             self.model = ChatModel.CHAT_GPT_4
         self.tokens_for_messages = 0
@@ -79,13 +35,14 @@ class UserTokenManager:
 
     def count_tokens_from_messages(self):
         """Returns the number of tokens used by the user in the chat."""
-        messages = [self.chat.get('system_message')] + self.chat.get('messages')
+        chat_data = self.chat.dict()
+        messages = [chat_data["system_message"]] + chat_data["messages"]
         self.tokens_for_messages = num_tokens_from_messages(messages, model=self.model)
         return self.tokens_for_messages
 
     def count_tokens_to_dollars(self, tokens: int, is_prompt: bool = False):
         """Returns the number of cents used by the user in the chat."""
-        model = self.chat.get("model", ChatModel.CHAT_GPT_3_5_TURBO_0301)
+        model = self.chat.current_model
         match model:
             case ChatModel.CHAT_GPT_3_5_TURBO | ChatModel.CHAT_GPT_3_5_TURBO_0301:
                 self.dollars_for_prompt = (
@@ -103,7 +60,7 @@ class UserTokenManager:
         """Returns True if the user has enough tokens to ask the AI."""
         tokens = self.count_tokens_from_messages()
         dollars = self.count_tokens_to_dollars(tokens, is_prompt=True)
-        current_balance = self.user.get('current_balance', 0)
+        current_balance = self.user_account.current_balance
         return current_balance >= dollars * 100  # convert dollars to cents
 
 

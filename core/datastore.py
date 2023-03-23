@@ -7,7 +7,8 @@ from google.cloud import datastore
 from google.cloud.datastore import Key
 from telegram import Update
 
-from core.open_ai import ChatModel, BASIC_INTRODUCTION, OVER_INTRODUCTION, DEFAULT_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE
+from core.models import Chat, Message, UserAccount, ModelTokenUsage
+from core.constants import BASIC_INTRODUCTION, OVER_INTRODUCTION
 from core.settings import Settings
 
 settings = Settings()
@@ -36,27 +37,8 @@ class DatastoreManager:
             if not user_entity:
                 is_created = True
                 user_entity = datastore.Entity(user_key)
-                user_entity.update({
-                    "user_id": user_id,
-                    "is_admin": False,
-                    "current_balance": 200,  # default new user balance is 200 cents or 2 dollars
-                    "model_token_usage": {
-                        ChatModel.CHAT_GPT_4_8K.value: {
-                            "prompt": 0,
-                            "completion": 0,
-                            "total_cost": 0
-                        },
-                        ChatModel.CHAT_GPT_4_32_K.value: {
-                            "prompt": 0,
-                            "completion": 0,
-                            "total_cost": 0
-                        },
-                        ChatModel.CHAT_GPT_3_5_TURBO_0301.value: {
-                            "total_tokens": 0,
-                            "total_cost": 0
-                        }
-                    }
-                })
+                user_account = UserAccount(user_id=user_id, model_token_usage=ModelTokenUsage())
+                user_entity.update(user_account.dict())
                 self.client.put(user_entity)
             return user_entity, user_key, is_created
 
@@ -92,34 +74,34 @@ class DatastoreManager:
                 CHAT_KIND, chat_id
             )
             chat_entity = self.client.get(chat_key)
-
-            if not chat_entity:
-                is_created = True
-                chat_entity = datastore.Entity(chat_key)
-                user_name = f"{update.effective_user.first_name} {update.effective_user.last_name}"
-                if not user_name:
-                    user_name = update.effective_user.username
-                # create initial system introduction for the chat, can be changed afterwards
-                intro_system_message = OVER_INTRODUCTION if chat_id == settings.MANAGED_CHAT_ID else BASIC_INTRODUCTION
-                chat_entity.update({
-                    "chat_id": chat_id,
-                    "current_model": ChatModel.CHAT_GPT_3_5_TURBO_0301,
-                    "max_tokens": DEFAULT_MAX_TOKENS,
-                    "temperature": DEFAULT_MODEL_TEMPERATURE,
-                    "system_message": {
-                        "role": "system",
-                        "content": intro_system_message
-                    }
-                    ,
-                    "messages": [
-                        {
+            user_name = f"{update.effective_user.first_name} {update.effective_user.last_name}"
+            if not user_name:
+                user_name = update.effective_user.username
+            new_message = {
                             "role": "user",
                             "content": f"{user_name} says:{update.effective_message.text}"
                         }
+            if not chat_entity:
+                is_created = True
+                chat_entity = datastore.Entity(chat_key)
+                # create initial system introduction for the chat, can be changed afterwards
+                intro_system_message = OVER_INTRODUCTION if chat_id == settings.MANAGED_CHAT_ID else BASIC_INTRODUCTION
+                chat = Chat(data={
+                    "chat_id": chat_id,
+                    "system_message": Message(data={
+                        "content": intro_system_message
+                    }),
+                    "messages": [
+                        Message(**new_message)
                     ]
                 })
-                self.client.put(chat_entity)
-
+                chat_entity.update(chat.dict())
+                return chat_entity, chat_key, is_created
+            else:
+                chat_entity.update({
+                    "messages": chat_entity["messages"] + [new_message]
+                })
+            self.client.put(chat_entity)
             return chat_entity, chat_key, is_created
 
     def update_or_create_chat_entity(self, data: dict) -> t.Tuple[datastore.Entity, Key, bool]:
@@ -137,12 +119,7 @@ class DatastoreManager:
             if not chat_entity:
                 is_created = True
                 chat_entity = datastore.Entity(chat_key)
-
-            if not is_created:
-                old_messages = chat_entity["messages"]
-                new_messages = data["messages"]
-                messages = old_messages + new_messages
-                data["messages"] = messages
+            # ToDo: add removal of messages conditionally
             chat_entity.update(data)
             self.client.put(chat_entity)
             return chat_entity, chat_key, is_created

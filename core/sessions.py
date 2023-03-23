@@ -10,7 +10,7 @@ from google.cloud import datastore
 from telegram import Update
 
 from core.constants import TWO_MINUTES
-from core.datastore import DatastoreManager
+from core.datastore import DatastoreManager, UserAccount, Chat
 from core.redis_tools import redis_client
 
 logger = logging.getLogger(__name__)
@@ -54,28 +54,31 @@ class ChatSession(Session):
 
     PREFIX = "chat_session:"
 
-    def get(self) -> t.Union[dict, datastore.Entity]:
+    def get(self) -> Chat:
         logger.debug("Trying to get the ChatSession from Redis.")
         chat: str = redis_client.get(self.redis_key)
+        user_name = f"{self.update.effective_user.first_name} {self.update.effective_user.last_name}"
+        if not user_name:
+            user_name = self.update.effective_user.username
+        new_message = {
+            'role': 'user',
+            'content': f"{user_name} says:{self.update.effective_message.text}"
+        }
         if chat:
-            dict_chat: dict = json.loads(chat)
-            user_name = f"{self.update.effective_user.first_name} {self.update.effective_user.last_name}"
-            if not user_name:
-                user_name = self.update.effective_user.username
-            new_message = {
-                'role': 'user',
-                'content': f"{user_name} says:{self.update.effective_message.text}"
-            }
-            dict_chat["messages"].append(new_message)
-            self.set(dict_chat)
-            logger.debug(f"ChatSession found in Redis: {dict_chat}")
-            return dict_chat
+            chat_data: dict = json.loads(chat)
+            chat_data["messages"].append(new_message)
+            self.set(chat_data)
+            logger.debug(f"ChatSession found in Redis: {chat_data}")
+            return Chat(**chat_data)
         logger.debug("ChatSession not found in Redis, getting it from the Datastore.")
         chat_entity, _, created = self.datastore_manager.get_or_create_chat_entity(self.update)
         logger.debug(f"ChatSession found in the Datastore: {chat_entity}. Created - {created}")
-        self.set(chat_entity)
-        logger.debug("ChatSession set in Redis.")
-        return chat_entity
+        chat_data: dict = json.loads(json.dumps(chat_entity), parse_int=str)
+        chat_data["messages"].append(new_message)
+        logger.debug(f'Update chat session messages with the new one.')
+        self.set(chat_data)
+        logger.debug("Updated ChatSession set in Redis.")
+        return Chat(**chat_data)
 
 
 class UserSession(Session):
@@ -83,16 +86,17 @@ class UserSession(Session):
 
     PREFIX = "user_session:"
 
-    def get(self) -> t.Union[dict, datastore.Entity]:
+    def get(self) -> UserAccount:
         logger.debug("Trying to get the UserSession from Redis.")
         user: str = redis_client.get(self.redis_key)
         if user:
-            dict_user: dict = json.loads(user)
-            logger.debug(f"UserSession found in Redis: {dict_user}")
-            return dict_user
+            user_data: dict = json.loads(user)
+            logger.debug(f"UserSession found in Redis: {user_data}")
+            return UserAccount(**user_data)
         logger.debug("UserSession not found in Redis, getting it from the Datastore.")
         user_entity, _, created = self.datastore_manager.get_or_create_user_account_entity(self.update)
         logger.debug(f"UserSession found in the Datastore: {user_entity}. Created - {created}")
-        self.set(user_entity)
+        user_data: dict = json.loads(json.dumps(user_entity), parse_int=str)
+        self.set(user_data)
         logger.debug("UserSession set in Redis.")
-        return user_entity
+        return UserAccount(**user_data)
