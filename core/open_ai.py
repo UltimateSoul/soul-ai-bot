@@ -27,7 +27,7 @@ class UserTokenManager:
     def __init__(self, user_account: UserAccount, chat: Chat):
         self.user_account = user_account
         self.chat = chat
-        self.model = chat.current_model
+        self.model = chat.open_ai_config.current_model
         if self.model in [ChatModel.CHAT_GPT_4_8K, ChatModel.CHAT_GPT_4_32_K]:
             self.model = ChatModel.CHAT_GPT_4
         self.tokens_for_messages = 0
@@ -42,7 +42,7 @@ class UserTokenManager:
 
     def count_tokens_to_dollars(self, tokens: int, is_prompt: bool = False):
         """Returns the number of cents used by the user in the chat."""
-        model = self.chat.current_model
+        model = self.chat.open_ai_config.current_model
         match model:
             case ChatModel.CHAT_GPT_3_5_TURBO | ChatModel.CHAT_GPT_3_5_TURBO_0301:
                 self.dollars_for_prompt = (
@@ -115,6 +115,8 @@ async def generate_response(messages: list[dict],
                             model: ChatModel = ChatModel.CHAT_GPT_3_5_TURBO_0301.value,
                             max_tokens=DEFAULT_MAX_TOKENS,
                             temperature=DEFAULT_MODEL_TEMPERATURE):
+    """Generates a response from the OpenAI API."""
+
     response = openai.ChatCompletion.create(
         model=model,  # The name of the OpenAI chatbot model to use
         messages=messages,  # The conversation history up to this point, as a list of dictionaries

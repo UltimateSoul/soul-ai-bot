@@ -46,7 +46,7 @@ class SoulAIBot:
             user_session = UserSession(entity_id=update.effective_user.id, update=update)
             chat: Chat = chat_session.get()
             user_account: UserAccount = user_session.get()
-            messages = get_normalized_chat_messages(chat=chat)
+            messages = get_normalized_chat_messages(chat=chat, chat_session=chat_session)
 
             user_manager = UserTokenManager(user_account=user_account, chat=chat)
             is_user_allowed_to_talk = user_manager.can_user_ask_ai()
@@ -116,7 +116,7 @@ def get_normalized_chat_messages(chat: Chat, chat_session: ChatSession) -> t.Lis
     system_message_tokens_num = num_tokens_from_messages([system_message], model=model)
     if system_message_tokens_num > chat.open_ai_config.max_tokens:  # Make sure that infinity loop is impossible
         raise TooManyTokensException(f"System message is too long. {system_message_tokens_num}."
-                                     f" Max tokens: {chat.open_ai_config.max_tokens}")
+                                     f" Max input tokens configured for that that is: {chat.open_ai_config.max_tokens}")
     all_messages_tokens_num = messages_tokens_num + system_message_tokens_num
     if all_messages_tokens_num > chat.open_ai_config.max_tokens:
         try:

@@ -53,7 +53,7 @@ class ModelTokenUsage(BaseModel):
 class UserAccount(BaseModel):
     user_id: int
     is_admin: bool = False
-    current_balance: int = 200
+    current_balance: int = 200  # the default balance in cents
     model_token_usage: ModelTokenUsage
 
 

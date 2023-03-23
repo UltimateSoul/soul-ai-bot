@@ -62,6 +62,7 @@ def save_user_account_session_to_datastore(data: dict, datastore_manager: Datast
     user, key, created = datastore_manager.update_or_create_user_account_entity(data)
     logger.debug(f"Data were successfully saved to the datastore. Data was created: {created}.")
 
+
 logger.info("Start listening to Redis")
 pubsub = redis_client.pubsub()
 logger.info("Subscribing to Redis")
