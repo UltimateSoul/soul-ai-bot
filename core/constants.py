@@ -8,6 +8,7 @@ TWO_MINUTES = 10
 EXPIRATION_TIME = TWO_MINUTES  # Redis data expiration time in seconds
 OPEN_AI_TIMEOUT = 10  # OpenAI API timeout in seconds
 
+
 class SupportedLanguages(str, enum.Enum):
     """Supported languages for the bot."""
 
@@ -26,6 +27,14 @@ class RedisPrefixes(str, enum.Enum):
 class TelegramMessages:
     LOW_BALANCE = "You have low balance. Please, top up your account. Your balance is {balance} cents, " \
                   "but the price of the required tokens input is {price} cents."
+
+    TOKEN_USAGE = """*Usage of models*:
+*GPT 3 5 Turbo*: _{token_usage.gpt_3_5_turbo.total_tokens}_ tokens
+*GPT 3 5 Turbo 0301*: _{token_usage.gpt_3_5_turbo_0301.total_tokens}_ tokens
+*GPT 4*: _{token_usage.gpt_4.total_tokens}_ tokens
+
+How are we counting tokens? ||[Open AI API](https://platform.openai.com/docs/guides/chat/introduction)||
+"""
 
     @staticmethod
     def construct_message(message: str, **kwargs) -> str:
@@ -60,7 +69,6 @@ MODEL_PRICING = {
         'price_per_1k_tokens': 0.002  # $0.002 / 1K tokens
     }
 }
-
 
 OVER_INTRODUCTION = """
 You are fully functional member of the telegram group of friends. You should act as a God of Knowledge and use archaisms

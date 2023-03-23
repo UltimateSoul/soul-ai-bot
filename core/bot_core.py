@@ -1,10 +1,14 @@
 import asyncio
 import logging
+import time
 import typing as t
+from functools import wraps
 
+import telegram
 from telegram import Update
-from telegram.constants import ChatType
+from telegram.constants import ChatType, ChatAction
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
+from telegram.helpers import escape_markdown
 
 from core.constants import TelegramMessages, ChatModel, OPEN_AI_TIMEOUT
 from core.datastore import UserAccount, Chat
@@ -27,6 +31,21 @@ settings = Settings()
 class SoulAIBot:
     """This class is responsible for the bot logic."""
 
+    @staticmethod
+    def send_action(action):
+        """Sends `action` while processing func command."""
+
+        def decorator(func):
+            @wraps(func)
+            async def command_func(cls, update, context, *args, **kwargs):
+                await context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=action)
+                return await func(cls, update, context, *args, **kwargs)
+
+            return command_func
+
+        return decorator
+
+    @send_action(ChatAction.TYPING)
     async def get_balance(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_session = UserSession(entity_id=update.effective_chat.id, update=update)
         user_account: UserAccount = user_session.get()
@@ -34,6 +53,16 @@ class SoulAIBot:
                                        text=f"Your current balance is {user_account.current_balance} "
                                             f"cents or {user_account.current_balance / 100} dollars")
 
+    @send_action(ChatAction.TYPING)
+    async def get_token_usage(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_session = UserSession(entity_id=update.effective_chat.id, update=update)
+        user_account: UserAccount = user_session.get()
+        token_usage = user_account.model_token_usage
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text=TelegramMessages.TOKEN_USAGE.format(token_usage=token_usage),
+                                       parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+
+    @send_action(ChatAction.TYPING)
     async def ask_knowledge_god(self, update: Update, context: ContextTypes.DEFAULT_TYPE, need_to_split=True,
                                 input_text=None):
         try:
@@ -168,5 +197,6 @@ if __name__ == '__main__':
 
     application.add_handler(CommandHandler(commands.ASK_KNOWLEDGE_GOD, soul_ai_bot.ask_knowledge_god))
     application.add_handler(CommandHandler(commands.GET_BALANCE, soul_ai_bot.get_balance))
+    application.add_handler(CommandHandler(commands.GET_TOKEN_USAGE, soul_ai_bot.get_token_usage))
     application.add_handler(MessageHandler(filters.ALL, soul_ai_bot.ai_dialogue))
     application.run_polling()
