@@ -11,7 +11,7 @@ from core.datastore import UserAccount, Chat
 from core.exceptions import TooManyTokensException, UnsupportedModelException
 from core.models import pydantic_model_per_gpt_model, Message
 from core.sessions import ChatSession, UserSession
-from core.commands import ASK_KNOWLEDGE_GOD
+from core import commands
 from core.open_ai import generate_response, num_tokens_from_messages, UserTokenManager
 from core.settings import Settings
 
@@ -26,6 +26,13 @@ settings = Settings()
 
 class SoulAIBot:
     """This class is responsible for the bot logic."""
+
+    async def get_balance(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_session = UserSession(entity_id=update.effective_chat.id, update=update)
+        user_account: UserAccount = user_session.get()
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text=f"Your current balance is {user_account.current_balance} "
+                                            f"cents or {user_account.current_balance / 100} dollars")
 
     async def ask_knowledge_god(self, update: Update, context: ContextTypes.DEFAULT_TYPE, need_to_split=True,
                                 input_text=None):
@@ -70,7 +77,7 @@ class SoulAIBot:
                 response = TelegramMessages.construct_message(
                     message=TelegramMessages.LOW_BALANCE,
                     balance=user_account.current_balance,
-                    price=user_manager.dollars_for_prompt * 100
+                    price=round(user_manager.dollars_for_prompt * 100, 4)
                 )
                 # ToDo: calculate price for prompt and completion price and save it to the user account entity
             await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
@@ -159,6 +166,7 @@ if __name__ == '__main__':
         .token(settings.TELEGRAM_BOT_API_TOKEN).build()  # ToDo: add normal settings get
     soul_ai_bot = SoulAIBot()
 
-    application.add_handler(CommandHandler(ASK_KNOWLEDGE_GOD, soul_ai_bot.ask_knowledge_god))
+    application.add_handler(CommandHandler(commands.ASK_KNOWLEDGE_GOD, soul_ai_bot.ask_knowledge_god))
+    application.add_handler(CommandHandler(commands.GET_BALANCE, soul_ai_bot.get_balance))
     application.add_handler(MessageHandler(filters.ALL, soul_ai_bot.ai_dialogue))
     application.run_polling()
