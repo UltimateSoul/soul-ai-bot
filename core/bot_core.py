@@ -9,7 +9,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
 from core.constants import TelegramMessages, ChatModel, OPEN_AI_TIMEOUT
 from core.datastore import UserAccount, Chat
 from core.exceptions import TooManyTokensException, UnsupportedModelException
-from core.models import pydantic_model_per_gpt_model, Message, GPT_3_5_Turbo
+from core.models import pydantic_model_per_gpt_model, Message
 from core.sessions import ChatSession, UserSession
 from core.commands import ASK_KNOWLEDGE_GOD
 from core.open_ai import generate_response, num_tokens_from_messages, UserTokenManager
@@ -46,21 +46,16 @@ class SoulAIBot:
             user_session = UserSession(entity_id=update.effective_user.id, update=update)
             chat: Chat = chat_session.get()
             user_account: UserAccount = user_session.get()
-            chat_messages = chat.dict()['messages']
-            messages = [chat.system_message.dict()] + chat_messages
-            model: ChatModel = chat.current_model
-            messages_tokens_num = num_tokens_from_messages(chat_messages, model=model)
-            if messages_tokens_num > chat.max_tokens:
-                while messages_tokens_num > chat.max_tokens:
-                    messages.pop(0)
-                    messages_tokens_num = num_tokens_from_messages(messages, model=model)
+            messages = get_normalized_chat_messages(chat=chat)
+
             user_manager = UserTokenManager(user_account=user_account, chat=chat)
             is_user_allowed_to_talk = user_manager.can_user_ask_ai()
             if is_user_allowed_to_talk:
+
                 open_ai_response = await asyncio.wait_for(generate_response(messages=messages,
-                                                                            model=chat.current_model,
-                                                                            max_tokens=chat.max_tokens,
-                                                                            temperature=chat.temperature),
+                                                                            model=chat.open_ai_config.current_model,
+                                                                            max_tokens=chat.open_ai_config.max_tokens,
+                                                                            temperature=chat.open_ai_config.temperature),
                                                           timeout=OPEN_AI_TIMEOUT)
 
                 logging.info("Response: {}".format(open_ai_response))
@@ -107,21 +102,42 @@ class SoulAIBot:
                 message = update.message
                 removed_member = message.left_chat_member
                 if removed_member:
-                    # ToDo: remove member from the chat entity in Datastore
                     goodbye_message = f"{removed_member.first_name} покинул телеграм канал, скажи пока."
                     # ToDo: add dynamic language
                     await self.ask_knowledge_god(update, context, need_to_split=False, input_text=goodbye_message)
+
+
+def get_normalized_chat_messages(chat: Chat, chat_session: ChatSession) -> t.List[dict[t.Any, t.Any]]:
+    chat_data = chat.dict()
+    chat_messages = chat_data['messages']
+    model: ChatModel = chat.open_ai_config.current_model
+    messages_tokens_num = num_tokens_from_messages(chat_messages, model=model)
+    system_message = chat.system_message.dict()
+    system_message_tokens_num = num_tokens_from_messages([system_message], model=model)
+    if system_message_tokens_num > chat.open_ai_config.max_tokens:  # Make sure that infinity loop is impossible
+        raise TooManyTokensException(f"System message is too long. {system_message_tokens_num}."
+                                     f" Max tokens: {chat.open_ai_config.max_tokens}")
+    all_messages_tokens_num = messages_tokens_num + system_message_tokens_num
+    if all_messages_tokens_num > chat.open_ai_config.max_tokens:
+        try:
+            while all_messages_tokens_num > chat.open_ai_config.max_tokens:
+                # ToDo: add validation for max_tokens and system message, because without the infinity loop is possible
+                chat_messages.pop(0)
+                all_messages_tokens_num = num_tokens_from_messages(chat_messages,
+                                                                   model=model) + system_message_tokens_num
+        finally:
+            chat_session.set(chat_data)
+    return [system_message] + chat_messages
 
 
 async def post_ai_response_logic(open_ai_response, response, chat, user_account, chat_session, user_session):
     logging.info("Response: {}".format(open_ai_response))
     usage: dict = open_ai_response['usage']
     pd_model = pydantic_model_per_gpt_model[
-        chat.current_model](**usage)
-    match chat.current_model:
+        chat.open_ai_config.current_model](**usage)
+    match chat.open_ai_config.current_model:
         case ChatModel.CHAT_GPT_3_5_TURBO:
             user_account.model_token_usage.gpt_3_5_turbo += pd_model
-
         case ChatModel.CHAT_GPT_3_5_TURBO_0301:
             user_account.model_token_usage.gpt_3_5_turbo_0301 += pd_model
         case ChatModel.CHAT_GPT_4:

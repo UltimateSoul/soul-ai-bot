@@ -4,9 +4,6 @@ ChatSessions reduce the load on the Datastore database, by storing the data in t
 """
 import json
 import logging
-import typing as t
-
-from google.cloud import datastore
 from telegram import Update
 
 from core.constants import TWO_MINUTES
@@ -74,8 +71,6 @@ class ChatSession(Session):
         chat_entity, _, created = self.datastore_manager.get_or_create_chat_entity(self.update)
         logger.debug(f"ChatSession found in the Datastore: {chat_entity}. Created - {created}")
         chat_data: dict = json.loads(json.dumps(chat_entity), parse_int=str)
-        chat_data["messages"].append(new_message)
-        logger.debug(f'Update chat session messages with the new one.')
         self.set(chat_data)
         logger.debug("Updated ChatSession set in Redis.")
         return Chat(**chat_data)

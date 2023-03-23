@@ -62,11 +62,15 @@ class Message(BaseModel):
     content: str
 
 
-class Chat(BaseModel):
-    chat_id: int
+class OpenAIConfig(BaseModel):
     current_model: ChatModel = ChatModel.CHAT_GPT_3_5_TURBO_0301
     max_tokens: int = DEFAULT_MAX_TOKENS
     temperature: float = DEFAULT_MODEL_TEMPERATURE
+
+
+class Chat(BaseModel):
+    chat_id: int
+    open_ai_config: OpenAIConfig = OpenAIConfig()
     system_message: Message
     messages: t.List[Message]
 

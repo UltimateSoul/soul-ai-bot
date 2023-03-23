@@ -103,9 +103,11 @@ def num_tokens_from_messages(messages: t.List[t.Dict[str, str]], model: ChatMode
 # Define function to generate response with OpenAI API
 @backoff.on_exception(
     wait_gen=backoff.expo,
-    exception=(openai.error.RateLimitError, openai.error.InvalidRequestError, openai.error.APIError,
-               openai.error.ServiceUnavailableError, openai.error.Timeout),
-    max_tries=5,
+    exception=(openai.error.RateLimitError,
+               openai.error.InvalidRequestError,
+               openai.error.APIError,
+               openai.error.ServiceUnavailableError),
+    max_tries=10,
     logger="open-ai-generate-response",
     backoff_log_level=logging.DEBUG,
 )

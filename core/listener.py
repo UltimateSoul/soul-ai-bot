@@ -36,9 +36,9 @@ def expire_event_handler(message):  # pragma: no cover
         datastore_manager = DatastoreManager()
         match prefix:
             case RedisPrefixes.CHAT_SESSION:
-                save_chat_session_to_datastore(data, datastore_manager)
+                save_chat_session_to_datastore(data=data, datastore_manager=datastore_manager)
             case RedisPrefixes.USER_SESSION:
-                save_user_session_to_datastore(chat_id, data, datastore_manager)
+                save_user_account_session_to_datastore(data=data, datastore_manager=datastore_manager)
                 ...  # ToDo: save to the Datastore
         # Once we got to know the value we remove it from Redis and do whatever required
         logger.debug(f"Deleting used data from Redis: {redis_key}.")
@@ -56,9 +56,11 @@ def save_chat_session_to_datastore(data: dict, datastore_manager: DatastoreManag
                  f" Chat: {chat}. Key: {key}.")
 
 
-def save_user_session_to_datastore(chat_id: str, data: dict, datastore_manager: DatastoreManager):
+def save_user_account_session_to_datastore(data: dict, datastore_manager: DatastoreManager):
     """Saves the user_session object to the Datastore"""
-    logger.debug(chat_id, data)
+    logger.debug("Saving user session to the Datastore: ", data)
+    user, key, created = datastore_manager.update_or_create_user_account_entity(data)
+    logger.debug(f"Data were successfully saved to the datastore. Data was created: {created}.")
 
 logger.info("Start listening to Redis")
 pubsub = redis_client.pubsub()

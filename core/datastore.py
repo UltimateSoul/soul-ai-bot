@@ -57,9 +57,8 @@ class DatastoreManager:
             if not user_entity:
                 is_created = True
                 user_entity = datastore.Entity(user_key)
-                user_entity.update(data)
 
-            # ToDo: modify
+            user_entity.update(data)
             self.client.put(user_entity)
             return user_entity, user_key, is_created
 
@@ -86,17 +85,14 @@ class DatastoreManager:
                 chat_entity = datastore.Entity(chat_key)
                 # create initial system introduction for the chat, can be changed afterwards
                 intro_system_message = OVER_INTRODUCTION if chat_id == settings.MANAGED_CHAT_ID else BASIC_INTRODUCTION
-                chat = Chat(data={
+                chat = Chat(**{
                     "chat_id": chat_id,
-                    "system_message": Message(data={
-                        "content": intro_system_message
-                    }),
+                    "system_message": Message(content=intro_system_message),
                     "messages": [
                         Message(**new_message)
                     ]
                 })
                 chat_entity.update(chat.dict())
-                return chat_entity, chat_key, is_created
             else:
                 chat_entity.update({
                     "messages": chat_entity["messages"] + [new_message]
@@ -119,7 +115,6 @@ class DatastoreManager:
             if not chat_entity:
                 is_created = True
                 chat_entity = datastore.Entity(chat_key)
-            # ToDo: add removal of messages conditionally
             chat_entity.update(data)
             self.client.put(chat_entity)
             return chat_entity, chat_key, is_created
