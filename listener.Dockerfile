@@ -19,4 +19,4 @@ COPY ../.. .
 EXPOSE 8080
 
 # Set the entrypoint command to run the application using Gunicorn
-CMD ["gunicorn", "main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8080"]
+CMD ["python", "main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8080"]
