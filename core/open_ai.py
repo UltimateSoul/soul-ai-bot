@@ -48,10 +48,14 @@ class UserTokenManager:
                 self.dollars_for_prompt = (
                         tokens / THOUSAND * MODEL_PRICING[ChatModel.CHAT_GPT_3_5_TURBO_0301]['price_per_1k_tokens'])
                 return self.dollars_for_prompt
-            case ChatModel.CHAT_GPT_4 | ChatModel.CHAT_GPT_4_0314 | ChatModel.CHAT_GPT_4_8K | ChatModel.CHAT_GPT_4_32_K:
-                self.dollars_for_prompt = tokens / THOUSAND * MODEL_PRICING[ChatModel.CHAT_GPT_4][
+            case ChatModel.CHAT_GPT_4 | ChatModel.CHAT_GPT_4_0314:
+                if tokens > 8000:
+                    model_to_count = ChatModel.CHAT_GPT_4_32_K
+                else:
+                    model_to_count = ChatModel.CHAT_GPT_4_8K
+                self.dollars_for_prompt = tokens / THOUSAND * MODEL_PRICING[model_to_count][
                     'prompt'] if is_prompt else \
-                    tokens / THOUSAND * MODEL_PRICING[ChatModel.CHAT_GPT_4]['completion']
+                    tokens / THOUSAND * MODEL_PRICING[model_to_count]['completion']
                 return self.dollars_for_prompt
             case _:
                 raise ValueError(f"Model {model} not found.")

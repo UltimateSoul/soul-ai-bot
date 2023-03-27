@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     TELEGRAM_WEBHOOK_URL: str = Field(env="TELEGRAM_WEBHOOK_URL")
     BOT_USERNAME: str = Field(env="BOT_USERNAME")
     GOOGLE_CLOUD_PROJECT: str = Field(env="GOOGLE_CLOUD_PROJECT")
-    MANAGED_CHAT_ID: str = Field(env="MANAGED_CHAT_ID")
+    MANAGED_CHAT_IDS: str = Field(env="MANAGED_CHAT_IDS")
     SUPERUSER_CHAT_ID: str = Field(env="SUPERUSER_CHAT_ID")
     MEMORY_STORE_SETTINGS: MemoryStoreSettings = MemoryStoreSettings()
 

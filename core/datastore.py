@@ -1,7 +1,9 @@
 """
 This module holds the functionality, to work with the Datastore in Google Cloud.
 """
+import logging
 import typing as t
+from sys import getsizeof
 
 from google.cloud import datastore
 from google.cloud.datastore import Key
@@ -14,6 +16,8 @@ from core.settings import Settings
 settings = Settings()
 CHAT_KIND = "Chat"
 USER_ACCOUNT_KIND = "UserAccount"
+
+logger = logging.getLogger('datastore: ')
 
 
 class DatastoreManager:
@@ -82,9 +86,11 @@ class DatastoreManager:
                         }
             if not chat_entity:
                 is_created = True
-                chat_entity = datastore.Entity(chat_key)
+                chat_entity = datastore.Entity(chat_key,
+                                               exclude_from_indexes=('messages', 'system_message'))
                 # create initial system introduction for the chat, can be changed afterwards
-                intro_system_message = OVER_INTRODUCTION if chat_id == settings.MANAGED_CHAT_ID else BASIC_INTRODUCTION
+                managed_chat_ids = settings.MANAGED_CHAT_IDS.split(",")
+                intro_system_message = OVER_INTRODUCTION if chat_id in managed_chat_ids else BASIC_INTRODUCTION
                 chat = Chat(**{
                     "chat_id": chat_id,
                     "system_message": Message(content=intro_system_message),
@@ -111,10 +117,13 @@ class DatastoreManager:
                 CHAT_KIND, chat_id
             )
             chat_entity = self.client.get(chat_key)
-
+            logger.debug(f"chat_entity: {chat_entity}")
+            logger.debug(f'Data size: {getsizeof(data)}')
+            logger.debug(f'Data: {data}')
             if not chat_entity:
                 is_created = True
-                chat_entity = datastore.Entity(chat_key)
+                chat_entity = datastore.Entity(chat_key,
+                                               exclude_from_indexes=('messages', 'system_message'))
             chat_entity.update(data)
             self.client.put(chat_entity)
             return chat_entity, chat_key, is_created

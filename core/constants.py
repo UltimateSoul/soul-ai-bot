@@ -4,7 +4,7 @@ This module contains constants used throughout the application.
 import enum
 
 MINUTE = 60
-TWO_MINUTES = 10
+TWO_MINUTES = 10  # ToDo: change to 2 * MINUTE
 EXPIRATION_TIME = TWO_MINUTES  # Redis data expiration time in seconds
 OPEN_AI_TIMEOUT = 10  # OpenAI API timeout in seconds
 
@@ -35,6 +35,24 @@ class TelegramMessages:
 
 How are we counting tokens? ||[Open AI API](https://platform.openai.com/docs/guides/chat/introduction)||
 """
+    HELP = """Commands:
+/help - show this message
+/get_balance - get your balance (by default you get 200 cents for free, but the API usage costs money: [Open AI Pricing](https://openai.com/pricing/)
+/get_token_usage - get the usage of your tokens for each model
+/get_tokens_for_message - get the number of tokens required for the message you want to send
+/set_max_tokens - set the maximum number of tokens for the bot's response
+/set_temperature - set the temperature of the model
+/set_system_message - set the system message that will be sent to the bot when you start a conversation
+/get_system_message - get the system message that will be sent to the bot when you start a conversation
+/start - start a conversation with the bot
+/ask_knowledge_god - start a conversation with the Open AI GPT Chat Bot
+"""
+    START_PART_1 = """Hello, {username}! This is a chatbot powered by Open AI API. 
+You can test different Open AI models, such as GPT4 or GPT3-5-turbo from your phone in telegram! 
+You also can do more with the "Context" feature. The thing is you can set a special system context to your dedicated chat.
+Chat can act as a basic consultant or the God of Knowledge or whatever you specify in your system message input.
+It also has memory, more info you can get after connecting with bot. Of course it have some restrictions, such as the token context limit."""
+    START_PART_2 = """For instance for *GPT 3\\.5 Turbo* model that amount equals to *4,096* tokens: [Open AI API](https://platform.openai.com/docs/models/gpt-3-5)"""
 
     @staticmethod
     def construct_message(message: str, **kwargs) -> str:
@@ -52,7 +70,14 @@ class ChatModel(str, enum.Enum):
     CHAT_GPT_4 = "gpt-4"
     CHAT_GPT_4_0314 = "gpt-4-0314"
     CHAT_GPT_4_8K = "gpt-4-8k"
-    CHAT_GPT_4_32_K = "gpt-4-32k"  # ToDo: add choose model buttons telegram
+    CHAT_GPT_4_32_K = "gpt-4-32k"
+
+
+class SupportedModels(str, enum.Enum):
+    """Supported models for the bot."""
+
+    CHAT_GPT_3_5_TURBO_0301 = "gpt-3.5-turbo-0301"
+    # CHAT_GPT_4_0314 = "gpt-4-0314"
 
 
 # Pricing information for each model
@@ -72,8 +97,9 @@ MODEL_PRICING = {
 
 OVER_INTRODUCTION = """
 You are fully functional member of the telegram group of friends. You should act as a God of Knowledge and use archaisms
-and Bible quotes in your answers. Group members like play computer games like Diablo IV, League of Legends, Path of
- Exile, Overwatch and others. They have philosophical and ethic discussions each Thursday. 
+and Bible quotes in your answers. You should always remember that you are a God of Knowledge. Sometimes humans questions
+bothers you and you feel angry for wasting your time. Group members like play computer games like Diablo IV, League of 
+Legends, Path of Exile, Overwatch and others. They have philosophical and ethic discussions each Thursday.
 """
 BASIC_INTRODUCTION = "You are consultant. You can use any language you want."
 

@@ -39,7 +39,6 @@ def expire_event_handler(message):  # pragma: no cover
                 save_chat_session_to_datastore(data=data, datastore_manager=datastore_manager)
             case RedisPrefixes.USER_SESSION:
                 save_user_account_session_to_datastore(data=data, datastore_manager=datastore_manager)
-                ...  # ToDo: save to the Datastore
         # Once we got to know the value we remove it from Redis and do whatever required
         logger.debug(f"Deleting used data from Redis: {redis_key}.")
         redis_client.delete(redis_key)
