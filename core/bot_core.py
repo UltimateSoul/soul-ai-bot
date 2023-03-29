@@ -112,7 +112,6 @@ class SoulAIBot:
             await context.bot.send_message(chat_id=update.effective_chat.id,
                                            text='Please, send me a message to get the number of tokens for it')
         else:
-            text = ""
             try:
                 chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
                 chat: Chat = chat_session.get()
@@ -152,7 +151,6 @@ class SoulAIBot:
                                                text=text,
                                                parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
             except Exception:
-                logging.exception(text)
                 await context.bot.send_message(chat_id=update.effective_chat.id,
                                                text='Sorry, something went wrong. Please, try again later')
 
@@ -406,7 +404,6 @@ def get_normalized_chat_messages(chat: Chat, chat_session: ChatSession) -> t.Tup
     if all_messages_tokens_num > chat.open_ai_config.max_tokens:
         try:
             while all_messages_tokens_num > chat.open_ai_config.max_tokens:
-                # ToDo: add validation for max_tokens and system message, because without the infinity loop is possible
                 chat_messages.pop(0)
                 all_messages_tokens_num = num_tokens_from_messages(chat_messages,
                                                                    model=model) + system_message_tokens_num

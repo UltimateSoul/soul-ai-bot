@@ -43,7 +43,8 @@ class DatastoreManager:
                 user_entity = datastore.Entity(user_key)
                 user_account = UserAccount(user_id=user_id, model_token_usage=ModelTokenUsage()).dict()
                 current_balance = user_account['current_balance']
-                user_account['current_balance'] = current_balance * DATASTORE_FLOAT_MULTIPLIER  # datastore cant store floats
+                user_account[
+                    'current_balance'] = current_balance * DATASTORE_FLOAT_MULTIPLIER  # datastore cant store floats
                 user_entity.update(user_account)
                 self.client.put(user_entity)
             user_entity['current_balance'] = user_entity['current_balance'] / DATASTORE_FLOAT_MULTIPLIER
@@ -98,7 +99,8 @@ class DatastoreManager:
                                                exclude_from_indexes=('messages', 'system_message'))
                 intro_system_message = BASIC_INTRODUCTION
                 system_message = Message(content=intro_system_message)
-                system_message_entity = datastore.Entity(exclude_from_indexes=list(system_message.dict().keys()))  # noqa
+                system_message_entity = datastore.Entity(
+                    exclude_from_indexes=list(system_message.dict().keys()))  # noqa
                 system_message_entity.update(system_message.dict())
 
                 chat = Chat(**{
