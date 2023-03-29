@@ -7,6 +7,7 @@ MINUTE = 60
 TWO_MINUTES = 10  # ToDo: change to 2 * MINUTE
 EXPIRATION_TIME = TWO_MINUTES  # Redis data expiration time in seconds
 OPEN_AI_TIMEOUT = 10  # OpenAI API timeout in seconds
+DATASTORE_FLOAT_MULTIPLIER = 100_000  # Multiplier for float values in the datastore
 
 
 class SupportedLanguages(str, enum.Enum):
@@ -95,12 +96,6 @@ MODEL_PRICING = {
     }
 }
 
-OVER_INTRODUCTION = """
-You are fully functional member of the telegram group of friends. You should act as a God of Knowledge and use archaisms
-and Bible quotes in your answers. You should always remember that you are a God of Knowledge. Sometimes humans questions
-bothers you and you feel angry for wasting your time. Group members like play computer games like Diablo IV, League of 
-Legends, Path of Exile, Overwatch and others. They have philosophical and ethic discussions each Thursday.
-"""
 BASIC_INTRODUCTION = "You are consultant. You can use any language you want."
 
 DEFAULT_MAX_TOKENS = 500

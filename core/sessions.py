@@ -6,7 +6,7 @@ import json
 import logging
 from telegram import Update
 
-from core.constants import TWO_MINUTES
+from core.constants import TWO_MINUTES, DATASTORE_FLOAT_MULTIPLIER
 from core.datastore import DatastoreManager, UserAccount, Chat
 from core.redis_tools import redis_client
 

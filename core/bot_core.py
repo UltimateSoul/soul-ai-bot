@@ -90,7 +90,7 @@ class SoulAIBot:
 
     @send_action(ChatAction.TYPING)
     async def get_balance(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_session = UserSession(entity_id=update.effective_chat.id, update=update)
+        user_session = UserSession(entity_id=update.effective_user.id, update=update)
         user_account: UserAccount = user_session.get()
         await context.bot.send_message(chat_id=update.effective_chat.id,
                                        text=f"Your current balance is {user_account.current_balance} "
@@ -141,10 +141,10 @@ class SoulAIBot:
                 system_message_cost = telegram.helpers.escape_markdown('{:.7f}'.format(system_message_cost), 2)
                 escaped_system_message = telegram.helpers.escape_markdown(system_message.content, 2)
                 text = f'Number of all the tokens for your message alongside with systen one is *{total_token_number}*, ' \
-                       f'it will cost you *{total_price}* cents' \
+                       f'it will cost you *{total_price}* cents\n' \
                        f'Don\\`t forget that in that cost is included the system message' \
-                       f' You can change the system message with _set_system_message_ command ' \
-                       f'The current system message is: *{escaped_system_message}*, number of tokens for it is ' \
+                       f' You can change the system message with _set system message_ command ' \
+                       f'The current system message is:\n *{escaped_system_message}*, number of tokens for it is ' \
                        f'{system_message_token_number}, it will cost you {system_message_cost} cents ' \
                        f'Token number for your message is {message_token_number}, it will cost you {message_cost} cents'
 
@@ -255,9 +255,10 @@ class SoulAIBot:
         try:
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
-            system_message = update.message.text.split()[1]
+            system_message = ' '.join(update.message.text.split()[1:])
             chat.system_message = Message(content=system_message,
                                           role='system')
+            chat_session.set(chat.dict())
             await context.bot.send_message(chat_id=update.effective_chat.id,
                                            text='You have successfully set the system message!')
         except IndexError:
@@ -286,13 +287,13 @@ class SoulAIBot:
     async def ask_knowledge_god(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             chat_id = update.effective_chat.id
-            managed_chat_ids = settings.MANAGED_CHAT_IDS.split(',')
-            if str(chat_id) not in [*managed_chat_ids, settings.SUPERUSER_CHAT_ID]:
-                # ToDo: change after production
-                await context.bot.send_message(chat_id=update.effective_chat.id,
-                                               text='Sorry. That bot is not working for you. '
-                                                    'You can ask @ultimatesoul to change that')
-                return
+            # managed_chat_ids = settings.MANAGED_CHAT_IDS.split(',')  ToDo: add after production
+            # if str(chat_id) not in [*managed_chat_ids, settings.SUPERUSER_CHAT_ID]:
+            #     # ToDo: change after production
+            #     await context.bot.send_message(chat_id=update.effective_chat.id,
+            #                                    text='Sorry. That bot is not working for you. '
+            #                                         'You can ask @ultimatesoul to change that')
+            #     return
 
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             user_session = UserSession(entity_id=update.effective_user.id, update=update)
@@ -304,7 +305,7 @@ class SoulAIBot:
             await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
             return
         try:
-            messages = get_normalized_chat_messages(chat=chat, chat_session=chat_session)
+            messages, tokens_count = get_normalized_chat_messages(chat=chat, chat_session=chat_session)
 
             user_manager = UserTokenManager(user_account=user_account, chat=chat)
             is_user_allowed_to_talk = user_manager.can_user_ask_ai()
@@ -349,15 +350,18 @@ class SoulAIBot:
 
     async def ai_dialogue(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-        effective_chat = update.effective_chat
-        match effective_chat.type:
-            case ChatType.PRIVATE:
-                await self.ask_knowledge_god(update, context)
-            case ChatType.SUPERGROUP:
-                if update.message.text:
-                    is_bot_was_mentioned = '@' + context.bot.username in update.message.text
-                    if is_bot_was_mentioned:
-                        await self.ask_knowledge_god(update, context)
+        try:
+            effective_chat = update.effective_chat
+            match effective_chat.type:
+                case ChatType.PRIVATE:
+                    await self.ask_knowledge_god(update, context)
+                case ChatType.SUPERGROUP | ChatType.GROUP:
+                    if update.message.text:
+                        is_bot_was_mentioned = '@' + context.bot.username in update.message.text
+                        if is_bot_was_mentioned:
+                            await self.ask_knowledge_god(update, context)
+        except Exception:
+            logging.exception('During ai_dialogue something went wrong')
 
     async def query_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         query = update.callback_query
@@ -382,13 +386,13 @@ class SoulAIBot:
             case commands.ASK_KNOWLEDGE_GOD:
                 update.message.text = f"Hi!"
                 await self.ask_knowledge_god(update, context)
-            case SupportedModels.CHAT_GPT_3_5_TURBO_0301.value | SupportedModels.CHAT_GPT_4_0314.value:
+            case SupportedModels.CHAT_GPT_3_5_TURBO_0301.value:
                 await self.set_model_callback(update, context)
             case _:
                 await update.callback_query.answer(text="Sorry, I don't know what to do with this button")
 
 
-def get_normalized_chat_messages(chat: Chat, chat_session: ChatSession) -> t.List[dict[t.Any, t.Any]]:
+def get_normalized_chat_messages(chat: Chat, chat_session: ChatSession) -> t.Tuple[t.List[dict[t.Any, t.Any]], int]:
     chat_data = chat.dict()
     chat_messages = chat_data['messages']
     model: ChatModel = chat.open_ai_config.current_model
@@ -408,7 +412,7 @@ def get_normalized_chat_messages(chat: Chat, chat_session: ChatSession) -> t.Lis
                                                                    model=model) + system_message_tokens_num
         finally:
             chat_session.set(chat_data)
-    return [system_message] + chat_messages
+    return [system_message] + chat_messages, all_messages_tokens_num
 
 
 async def post_ai_response_logic(open_ai_response, response: str, chat: Chat, user_account: UserAccount,
