@@ -27,10 +27,18 @@ class DatastoreManager:
     def __init__(self):
         self.client = datastore.Client(project=settings.GOOGLE_CLOUD_PROJECT)
 
-    def get_or_create_user_account_entity(self, update: Update) -> t.Tuple[datastore.Entity, Key, bool]:
+
+    def get_user_account_by_username(self, username: str):
+        """Returns a user account entity by its username."""
+        query = self.client.query(kind=USER_ACCOUNT_KIND)
+        query.add_filter('username', '=', username.replace("@", ""))
+        for user in query.fetch(limit=1):
+            return user
+
+    def get_or_create_user_account_entity(self, data: t.Union[Update, dict]) -> t.Tuple[datastore.Entity, Key, bool]:
         """Creates a new user account entity in the Datastore UserAccount kind."""
 
-        user_id = update.effective_user.id
+        user_id = data.effective_user.id if isinstance(data, Update) else data['user_id']
         is_created = False
 
         with self.client.transaction():
@@ -41,7 +49,11 @@ class DatastoreManager:
             if not user_entity:
                 is_created = True
                 user_entity = datastore.Entity(user_key)
-                user_account = UserAccount(user_id=user_id, model_token_usage=ModelTokenUsage()).dict()
+                username = data.effective_user.username if isinstance(data, Update) else data['username']
+                user_account = UserAccount(user_id=user_id,
+                                           is_admin=user_id == settings.SUPERUSER_CHAT_ID,
+                                           username=username,
+                                           model_token_usage=ModelTokenUsage()).dict()
                 current_balance = user_account['current_balance']
                 user_account[
                     'current_balance'] = current_balance * DATASTORE_FLOAT_MULTIPLIER  # datastore cant store floats

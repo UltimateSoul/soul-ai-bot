@@ -4,12 +4,13 @@ import typing as t
 from functools import wraps
 
 import telegram
+from google.cloud.datastore import Entity
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.constants import ChatType, ChatAction
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
 from core.constants import TelegramMessages, ChatModel, OPEN_AI_TIMEOUT, SupportedModels
-from core.datastore import UserAccount, Chat
+from core.datastore import UserAccount, Chat, DatastoreManager
 from core.exceptions import TooManyTokensException, UnsupportedModelException
 from core.models import pydantic_model_per_gpt_model, Message
 from core.sessions import ChatSession, UserSession
@@ -282,22 +283,76 @@ class SoulAIBot:
                                            text='Sorry, something went wrong. Please, try again later')
 
     @send_action(ChatAction.TYPING)
+    async def clear_context(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        try:
+            chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
+            chat: Chat = chat_session.get()
+            chat.messages = []
+            chat_session.set(chat.dict())
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           text='You have successfully cleared the context!')
+        except Exception:
+            logging.exception('Error in clear_context')
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           text='Sorry, something went wrong. Please, try again later')
+
+    async def add_money(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        try:
+            user_id = update.effective_user.id
+            if user_id != int(settings.SUPERUSER_CHAT_ID):
+                await context.bot.send_message(chat_id=update.effective_chat.id,
+                                               text='You are not allowed to do this')
+                return
+            entities = update.message.entities
+            mentioned_user_id = None
+            username = None
+            user_account_entity = None
+            for entity in entities:
+                if entity.type == "mention":
+                    username = update.message.text[entity.offset:entity.offset + entity.length]
+                    mentioned_user = entity.user
+                    if not mentioned_user:
+                        datastore_manager = DatastoreManager()
+                        user_account_entity = datastore_manager.get_user_account_by_username(username)
+                        if not user_account_entity:
+                            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                                           text='User not found. Maybe he is not in the chat or hav'
+                                                                'en\`t speak to me yet')
+                            return
+                        mentioned_user_id = user_account_entity.get('user_id')
+                    else:
+                        mentioned_user = context.bot.get_chat_member(chat_id=update.message.chat_id,
+                                                                     user_id=mentioned_user.id)
+                        mentioned_user_id = mentioned_user.user.id
+                    break
+
+            if not mentioned_user_id or not username:
+                await context.bot.send_message(chat_id=update.effective_chat.id,
+                                               text='Please, mention the user you want to add money to')
+                return
+            datastore_manager = DatastoreManager()
+            if not user_account_entity:
+                user_account_entity, _, _ = datastore_manager.get_or_create_user_account_entity(
+                    data={"user_id": mentioned_user_id,
+                          "username": username})
+            user_account: UserAccount = UserAccount(**user_account_entity)
+            user_account.current_balance += 200
+            datastore_manager.update_or_create_user_account_entity(user_account.dict())
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           text='Deal!')
+        except Exception:
+            logging.exception('Error in add_money')
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           text='Sorry, something went wrong. Please, try again later')
+
+    @send_action(ChatAction.TYPING)
     async def ask_knowledge_god(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            chat_id = update.effective_chat.id
-            # managed_chat_ids = settings.MANAGED_CHAT_IDS.split(',')  ToDo: add after production
-            # if str(chat_id) not in [*managed_chat_ids, settings.SUPERUSER_CHAT_ID]:
-            #     # ToDo: change after production
-            #     await context.bot.send_message(chat_id=update.effective_chat.id,
-            #                                    text='Sorry. That bot is not working for you. '
-            #                                         'You can ask @ultimatesoul to change that')
-            #     return
-
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             user_session = UserSession(entity_id=update.effective_user.id, update=update)
             chat: Chat = chat_session.get()
             user_account: UserAccount = user_session.get()
-        except Exception as e:
+        except Exception:
             logging.exception('During ask_knowledge_god something went wrong')
             response = "I'm sorry, I have some problems with my brain. Please, try again later."
             await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
@@ -451,6 +506,8 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler(commands.SET_MODEL, soul_ai_bot.set_model))
     application.add_handler(CommandHandler(commands.SET_SYSTEM_MESSAGE, soul_ai_bot.set_system_message))
     application.add_handler(CommandHandler(commands.GET_SYSTEM_MESSAGE, soul_ai_bot.get_system_message))
+    application.add_handler(CommandHandler(commands.CLEAR_CONTEXT, soul_ai_bot.clear_context))
+    application.add_handler(CommandHandler(commands.ADD_MONEY, soul_ai_bot.add_money))
     application.add_handler(CallbackQueryHandler(soul_ai_bot.query_handler))
     application.add_handler(CommandHandler(commands.ASK_KNOWLEDGE_GOD, soul_ai_bot.ask_knowledge_god))
     application.add_handler(MessageHandler(filters.ALL, soul_ai_bot.ai_dialogue))
