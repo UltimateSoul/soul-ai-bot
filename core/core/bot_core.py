@@ -4,10 +4,9 @@ import typing as t
 from functools import wraps
 
 import telegram
-from google.cloud.datastore import Entity
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.constants import ChatType, ChatAction
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+from telegram.ext import ContextTypes
 
 from core.constants import TelegramMessages, ChatModel, OPEN_AI_TIMEOUT, SupportedModels
 from core.datastore import UserAccount, Chat, DatastoreManager
@@ -299,7 +298,7 @@ class SoulAIBot:
     async def add_money(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             user_id = update.effective_user.id
-            if user_id != int(settings.SUPERUSER_CHAT_ID):
+            if user_id != int(settings.ADMIN_CHAT_ID):
                 await context.bot.send_message(chat_id=update.effective_chat.id,
                                                text='You are not allowed to do this')
                 return
@@ -490,25 +489,3 @@ async def post_ai_response_logic(open_ai_response, response: str, chat: Chat, us
     chat.messages.append(Message(**assistant_message))
     chat_session.set(entity=chat.dict())
     user_session.set(entity=user_account.dict())
-
-
-if __name__ == '__main__':
-    application = ApplicationBuilder() \
-        .token(settings.TELEGRAM_BOT_API_TOKEN).build()  # ToDo: add normal settings get
-    soul_ai_bot = SoulAIBot()
-    application.add_handler(CommandHandler(commands.GET_BALANCE, soul_ai_bot.get_balance))
-    application.add_handler(CommandHandler(commands.GET_TOKEN_USAGE, soul_ai_bot.get_token_usage))
-    application.add_handler(CommandHandler(commands.START, soul_ai_bot.start))
-    application.add_handler(CommandHandler(commands.HELP, soul_ai_bot.help))
-    application.add_handler(CommandHandler(commands.GET_TOKENS_FOR_MESSAGE, soul_ai_bot.get_tokens_for_message))
-    application.add_handler(CommandHandler(commands.SET_MAX_TOKENS, soul_ai_bot.set_max_tokens))
-    application.add_handler(CommandHandler(commands.SET_TEMPERATURE, soul_ai_bot.set_temperature))
-    application.add_handler(CommandHandler(commands.SET_MODEL, soul_ai_bot.set_model))
-    application.add_handler(CommandHandler(commands.SET_SYSTEM_MESSAGE, soul_ai_bot.set_system_message))
-    application.add_handler(CommandHandler(commands.GET_SYSTEM_MESSAGE, soul_ai_bot.get_system_message))
-    application.add_handler(CommandHandler(commands.CLEAR_CONTEXT, soul_ai_bot.clear_context))
-    application.add_handler(CommandHandler(commands.ADD_MONEY, soul_ai_bot.add_money))
-    application.add_handler(CallbackQueryHandler(soul_ai_bot.query_handler))
-    application.add_handler(CommandHandler(commands.ASK_KNOWLEDGE_GOD, soul_ai_bot.ask_knowledge_god))
-    application.add_handler(MessageHandler(filters.ALL, soul_ai_bot.ai_dialogue))
-    application.run_polling()

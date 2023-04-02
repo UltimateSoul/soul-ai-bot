@@ -8,15 +8,15 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock ./
 
 # Install the dependencies using Poetry
-RUN pip install poetry && \
+RUN pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false && \
     poetry install --no-dev
 
 # Copy the rest of the application code into the container
-COPY ../.. .
+COPY core .
 
 # Expose port 8080 for the application
 EXPOSE 8080
 
 # Set the entrypoint command to run the application using Gunicorn
-CMD ["gunicorn", "main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8080"]
+CMD ["uvicorn", "main:app", "--workers", "4", "--host", "0.0.0.0", "--port", "8080", "--log-level", "debug"]

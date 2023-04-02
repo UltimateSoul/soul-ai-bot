@@ -9,8 +9,8 @@ from google.cloud import datastore
 from google.cloud.datastore import Key
 from telegram import Update
 
-from core.models import Chat, Message, UserAccount, ModelTokenUsage
 from core.constants import BASIC_INTRODUCTION, DATASTORE_FLOAT_MULTIPLIER
+from core.models import Chat, Message, UserAccount, ModelTokenUsage
 from core.settings import Settings
 
 settings = Settings()
@@ -26,7 +26,6 @@ class DatastoreManager:
 
     def __init__(self):
         self.client = datastore.Client(project=settings.GOOGLE_CLOUD_PROJECT)
-
 
     def get_user_account_by_username(self, username: str):
         """Returns a user account entity by its username."""
@@ -51,7 +50,7 @@ class DatastoreManager:
                 user_entity = datastore.Entity(user_key)
                 username = data.effective_user.username if isinstance(data, Update) else data['username']
                 user_account = UserAccount(user_id=user_id,
-                                           is_admin=user_id == settings.SUPERUSER_CHAT_ID,
+                                           is_admin=user_id == settings.ADMIN_CHAT_ID,
                                            username=username,
                                            model_token_usage=ModelTokenUsage()).dict()
                 current_balance = user_account['current_balance']
