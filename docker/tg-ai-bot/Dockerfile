@@ -5,7 +5,7 @@ FROM python:3.11-slim-buster
 WORKDIR /app
 
 # Copy the requirements file into the container
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml ./
 COPY google_service_credentials.json ./
 
 # Install the dependencies using Poetry
