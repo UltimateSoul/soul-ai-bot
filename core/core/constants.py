@@ -4,7 +4,7 @@ This module contains constants used throughout the application.
 import enum
 
 MINUTE = 60
-TWO_MINUTES = 10  # ToDo: change to 2 * MINUTE
+TWO_MINUTES = 2 * MINUTE
 EXPIRATION_TIME = TWO_MINUTES  # Redis data expiration time in seconds
 OPEN_AI_TIMEOUT = 10  # OpenAI API timeout in seconds
 DATASTORE_FLOAT_MULTIPLIER = 100_000  # Multiplier for float values in the datastore
