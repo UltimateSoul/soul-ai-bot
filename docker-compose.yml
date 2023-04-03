@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  redis:
+    image: "redis:latest"
+    container_name: "redis-container"
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    restart: on-failure
+
+  listener:
+    container_name: "listener"
+    build:
+        context: .
+        dockerfile: docker/listener/Dockerfile
+    restart: on-failure
+    depends_on:
+      - redis
+    env_file:
+      - .env

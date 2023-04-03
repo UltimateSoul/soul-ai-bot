@@ -1,0 +1,18 @@
+"""
+This file contains the commands that are used by the bot.
+"""
+
+ASK_KNOWLEDGE_GOD = "ask_knowledge_god"
+GET_BALANCE = "get_balance"
+GET_TOKEN_USAGE = "get_token_usage"
+GET_TOKENS_FOR_MESSAGE = "get_tokens_for_message"
+HELP = "help"
+MANAGE_CHAT = "manage_chat"
+SET_MAX_TOKENS = "set_max_tokens"
+SET_MODEL = "set_model"
+SET_SYSTEM_MESSAGE = "set_system_message"
+SET_TEMPERATURE = "set_temperature"
+GET_SYSTEM_MESSAGE = "get_system_message"
+CLEAR_CONTEXT = "clear_context"
+START = "start"
+ADD_MONEY = "add_money"

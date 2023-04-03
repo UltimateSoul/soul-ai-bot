@@ -11,6 +11,7 @@ from core.datastore import DatastoreManager, UserAccount, Chat
 from core.redis_tools import redis_client
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class Session:
@@ -63,9 +64,9 @@ class ChatSession(Session):
         }
         if chat:
             chat_data: dict = json.loads(chat)
+            logger.debug(f"ChatSession found in Redis: {chat_data}")
             chat_data["messages"].append(new_message)
             self.set(chat_data)
-            logger.debug(f"ChatSession found in Redis: {chat_data}")
             return Chat(**chat_data)
         logger.debug("ChatSession not found in Redis, getting it from the Datastore.")
         chat_entity, _, created = self.datastore_manager.get_or_create_chat_entity(self.update)

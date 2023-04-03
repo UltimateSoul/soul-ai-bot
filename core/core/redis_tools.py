@@ -3,6 +3,7 @@ That module manages creation all the necessary connections within the applicatio
 the Memorystore to the Datastore when the application is about to stop.
 """
 import redis
+
 from core.settings import Settings
 
 settings = Settings()

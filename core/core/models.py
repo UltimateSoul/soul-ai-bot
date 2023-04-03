@@ -32,7 +32,7 @@ class GPT_4(BaseModel):
         completion_32k_price = MODEL_PRICING[ChatModel.CHAT_GPT_4_32_K]['completion']
         if self.total_tokens < 8001:
             return prompt_token_coefficient * prompt_8k_price + completion_token_coefficient * completion_8k_price
-        elif self.total_tokens < 32001:
+        elif 8000 < self.total_tokens < 32001:
             return prompt_token_coefficient * prompt_32k_price + completion_token_coefficient * completion_32k_price
         else:
             raise TooManyTokensException('Too many tokens')
@@ -52,8 +52,9 @@ class ModelTokenUsage(BaseModel):
 
 class UserAccount(BaseModel):
     user_id: int
+    username: str
     is_admin: bool = False
-    current_balance: int = 200  # the default balance in cents
+    current_balance: float = 200  # the default balance in cents
     model_token_usage: ModelTokenUsage
 
 

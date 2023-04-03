@@ -39,7 +39,6 @@ def expire_event_handler(message):  # pragma: no cover
                 save_chat_session_to_datastore(data=data, datastore_manager=datastore_manager)
             case RedisPrefixes.USER_SESSION:
                 save_user_account_session_to_datastore(data=data, datastore_manager=datastore_manager)
-                ...  # ToDo: save to the Datastore
         # Once we got to know the value we remove it from Redis and do whatever required
         logger.debug(f"Deleting used data from Redis: {redis_key}.")
         redis_client.delete(redis_key)
@@ -63,10 +62,11 @@ def save_user_account_session_to_datastore(data: dict, datastore_manager: Datast
     logger.debug(f"Data were successfully saved to the datastore. Data was created: {created}.")
 
 
-logger.info("Start listening to Redis")
-pubsub = redis_client.pubsub()
-logger.info("Subscribing to Redis")
-pubsub.psubscribe(**{EXPIRED_KEY_EVENT: expire_event_handler})
-logger.info("Running Redis in thread")
-pubsub.run_in_thread(sleep_time=0.01)
-logger.info("Done")
+if __name__ == "__main__":
+    logger.info("Start listening to Redis")
+    pubsub = redis_client.pubsub()
+    logger.info("Subscribing to Redis")
+    pubsub.psubscribe(**{EXPIRED_KEY_EVENT: expire_event_handler})
+    logger.info("Running Redis in thread")
+    pubsub.run_in_thread(sleep_time=0.01)
+    logger.info("Done")
