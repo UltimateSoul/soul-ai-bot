@@ -337,6 +337,8 @@ class SoulAIBot:
             user_account: UserAccount = UserAccount(**user_account_entity)
             user_account.current_balance += 200
             datastore_manager.update_or_create_user_account_entity(user_account.dict())
+            user_session = UserSession(entity_id=mentioned_user_id, update=update)
+            user_session.set(user_account.dict())
             await context.bot.send_message(chat_id=update.effective_chat.id,
                                            text='Deal!')
         except Exception:

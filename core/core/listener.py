@@ -62,10 +62,11 @@ def save_user_account_session_to_datastore(data: dict, datastore_manager: Datast
     logger.debug(f"Data were successfully saved to the datastore. Data was created: {created}.")
 
 
-logger.info("Start listening to Redis")
-pubsub = redis_client.pubsub()
-logger.info("Subscribing to Redis")
-pubsub.psubscribe(**{EXPIRED_KEY_EVENT: expire_event_handler})
-logger.info("Running Redis in thread")
-pubsub.run_in_thread(sleep_time=0.01)
-logger.info("Done")
+if __name__ == "__main__":
+    logger.info("Start listening to Redis")
+    pubsub = redis_client.pubsub()
+    logger.info("Subscribing to Redis")
+    pubsub.psubscribe(**{EXPIRED_KEY_EVENT: expire_event_handler})
+    logger.info("Running Redis in thread")
+    pubsub.run_in_thread(sleep_time=0.01)
+    logger.info("Done")
