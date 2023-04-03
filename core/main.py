@@ -19,7 +19,6 @@ from core.datastore import DatastoreManager
 from core.settings import Settings
 
 application = None
-APP_CONTEXT = {}
 # Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -33,9 +32,12 @@ app = FastAPI()
 
 @backoff.on_exception(backoff.expo, telegram.error.RetryAfter, max_time=60)
 async def set_webhook():
-    logger.info(f"Setting webhook by URL {settings.TELEGRAM_WEBHOOK_URL}/webhook...")
-    await application.bot.set_webhook(url=f"{settings.TELEGRAM_WEBHOOK_URL}/webhook")
-    logger.info("Webhook set!")
+    if settings.TELEGRAM_WEBHOOK_URL != "None":
+        logger.info(f"Setting webhook by URL {settings.TELEGRAM_WEBHOOK_URL}/webhook...")
+        await application.bot.set_webhook(url=f"{settings.TELEGRAM_WEBHOOK_URL}/webhook")
+        logger.info("Webhook set!")
+    else:
+        logger.info("Webhook URL is None, skipping...")
 
 
 @app.on_event("startup")
@@ -74,10 +76,6 @@ async def on_start():
     await application.initialize()
     await application.start()
     await set_webhook()
-    APP_CONTEXT["datastore_manager"] = DatastoreManager()
-    APP_CONTEXT["redis_client"] = redis.Redis(host=settings.MEMORY_STORE_SETTINGS.HOST,
-                                              port=settings.MEMORY_STORE_SETTINGS.PORT,
-                                              db=0)
     webhook_info = await application.bot.get_webhook_info()
     logger.info(f"Webhook info: {webhook_info}")
 
@@ -89,7 +87,6 @@ async def on_shutdown():
     if isinstance(application, Application):
         await application.stop()
         await application.shutdown()
-    APP_CONTEXT.clear()
 
 
 class WebhookUpdate(BaseModel):
