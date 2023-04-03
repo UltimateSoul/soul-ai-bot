@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir poetry && \
 COPY core .
 
 # Expose port 8080 for the application
-EXPOSE 8000
+EXPOSE 8080
 
 # Set the entrypoint command to run the application using Gunicorn
-CMD ["uvicorn", "main:app", "--workers", "4", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--workers", "4", "--host", "0.0.0.0", "--port", "8080"]
