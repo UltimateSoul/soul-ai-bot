@@ -107,13 +107,13 @@ class SoulAIBot:
 
     @send_action(ChatAction.TYPING)
     async def get_tokens_for_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        message = ' '.join(update.message.text.split()[1:])
+        message = ' '.join(update.effective_message.text.split()[1:])
         if not message:
             await context.bot.send_message(chat_id=update.effective_chat.id,
                                            text='Please, send me a message to get the number of tokens for it')
         else:
             try:
-                
+
                 chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
                 chat: Chat = chat_session.get()
                 system_message = chat.system_message
@@ -158,18 +158,17 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def set_max_tokens(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            max_tokens = int(update.message.text.split()[1])
-            
+            max_tokens = int(update.effective_message.text.split()[1])
+
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             system_message = chat.system_message
             system_message_token_number = num_tokens_from_messages(messages=[system_message.dict()],
                                                                    model=chat.open_ai_config.current_model)
-            if max_tokens < system_message_token_number + 100:
+            if max_tokens / 2 < system_message_token_number:
                 await context.bot.send_message(chat_id=update.effective_chat.id,
                                                text='Sorry, but the number of tokens you want to set is too small. '
-                                                    f'Your system message has {system_message_token_number} tokens. '
-                                                    f'You need to set at least {system_message_token_number + 100}'
+                                                    f'You need to set at least {max_tokens / 2} '
                                                     f' tokens to proceed')
             else:
                 chat.open_ai_config.max_tokens = max_tokens
@@ -192,8 +191,8 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def set_temperature(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            temperature = float(update.message.text.split()[1])
-            
+            temperature = float(update.effective_message.text.split()[1])
+
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             if temperature < 0.0 or temperature > 1.0:
@@ -237,7 +236,7 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def set_model_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            
+
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             model = SupportedModels(update.callback_query.data)
@@ -255,22 +254,35 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def set_system_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            system_message = ' '.join(update.message.text.split()[1:])
-            
+            system_message = ' '.join(update.effective_message.text.split()[1:])
+            system_message = Message(content=system_message,
+                                     role='system')
+
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
+            system_message_token_number = num_tokens_from_messages(messages=[system_message.dict()],
+                                                                   model=chat_session.get().open_ai_config.current_model)
             chat: Chat = chat_session.get()
-            if len(system_message) > 20:
-                chat.system_message = Message(content=system_message,
-                                              role='system')
-                chat_session.set(chat.dict())
-                await context.bot.send_message(chat_id=update.effective_chat.id,
-                                               text='You have successfully set the system message!')
+            if system_message_token_number > 10:
+
+                if system_message_token_number < chat.open_ai_config.max_tokens / 2:
+                    # ToDo: get rid of that shitty validation
+                    chat.system_message = system_message
+                    chat_session.set(chat.dict())
+                    await context.bot.send_message(chat_id=update.effective_chat.id,
+                                                   text='You have successfully set the system message!')
+                else:
+                    await context.bot.send_message(chat_id=update.effective_chat.id,
+                                                   text='Your system message should be at least half of the maximum '
+                                                        'number of tokens. Currently, the maximum number of tokens is '
+                                                        f'set to {chat.open_ai_config.max_tokens}. So the system '
+                                                        f'message should not be more than {chat.open_ai_config.max_tokens / 2}'
+                                                        f' tokens. Your current system message is {system_message_token_number} tokens.')
             else:
                 await context.bot.send_message(chat_id=update.effective_chat.id,
                                                text='Please, send me a larger system message (at least 20 characters)')
         except IndexError:
             await context.bot.send_message(chat_id=update.effective_chat.id,
-                                           text='Please send me a larger system message (at least 20 characters)')
+                                           text='Please send me a system message (at least 10 tokens)')
 
         except Exception:
             logging.exception('Error in set_system_message')
@@ -280,7 +292,6 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def get_system_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             await context.bot.send_message(chat_id=update.effective_chat.id,
@@ -294,7 +305,7 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def clear_context(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            
+
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             chat.messages = []
@@ -313,13 +324,13 @@ class SoulAIBot:
                 await context.bot.send_message(chat_id=update.effective_chat.id,
                                                text='You are not allowed to do this')
                 return
-            entities = update.message.entities
+            entities = update.effective_message.entities
             mentioned_user_id = None
             username = None
             user_account_entity = None
             for entity in entities:
                 if entity.type == "mention":
-                    username = update.message.text[entity.offset:entity.offset + entity.length]
+                    username = update.effective_message.text[entity.offset:entity.offset + entity.length]
                     mentioned_user = entity.user
                     if not mentioned_user:
                         datastore_manager = DatastoreManager()
@@ -331,7 +342,7 @@ class SoulAIBot:
                             return
                         mentioned_user_id = user_account_entity.get('user_id')
                     else:
-                        mentioned_user = context.bot.get_chat_member(chat_id=update.message.chat_id,
+                        mentioned_user = context.bot.get_chat_member(chat_id=update.effective_message.chat_id,
                                                                      user_id=mentioned_user.id)
                         mentioned_user_id = mentioned_user.user.id
                     break
@@ -357,7 +368,9 @@ class SoulAIBot:
                                            text='Sorry, something went wrong. Please, try again later')
 
     @send_action(ChatAction.TYPING)
-    async def ask_knowledge_god(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def ask_knowledge_god(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+                                is_replied_to_bot: bool,
+                                bot_message: str):
         try:
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             user_session = UserSession(entity_id=update.effective_user.id, update=update)
@@ -365,11 +378,13 @@ class SoulAIBot:
             user_account: UserAccount = user_session.get()
         except Exception:
             logging.exception('During ask_knowledge_god something went wrong')
-            response = "I'm sorry, I have some problems with my brain. Please, try again later."
+            response = "I'm sorry, I have some problems... Please, try again later."
             await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
             return
         try:
-            messages, tokens_count = get_normalized_chat_messages(chat=chat, chat_session=chat_session)
+            messages, tokens_count = get_normalized_chat_messages(chat=chat, chat_session=chat_session,
+                                                                  is_replied_to_bot=is_replied_to_bot,
+                                                                  bot_message=bot_message)
 
             user_manager = UserTokenManager(user_account=user_account, chat=chat)
             is_user_allowed_to_talk = user_manager.can_user_ask_ai()
@@ -416,16 +431,28 @@ class SoulAIBot:
 
         try:
             effective_chat = update.effective_chat
-            match effective_chat.type:
-                case ChatType.PRIVATE:
-                    await self.ask_knowledge_god(update, context)
-                case ChatType.SUPERGROUP | ChatType.GROUP:
-                    if update.message.text:
-                        is_bot_was_mentioned = '@' + context.bot.username in update.message.text
+            msg = update.effective_message
+            if msg.text:
+                is_replied_to_bot, bot_message = await self.is_replied_to_bot_message(context, msg)
+                match effective_chat.type:
+                    case ChatType.PRIVATE:
+                        await self.ask_knowledge_god(update, context, is_replied_to_bot, bot_message)
+                    case ChatType.SUPERGROUP | ChatType.GROUP:
+                        is_bot_was_mentioned = '@' + context.bot.username in msg.text
                         if is_bot_was_mentioned:
-                            await self.ask_knowledge_god(update, context)
+                            await self.ask_knowledge_god(update, context, is_replied_to_bot, bot_message)
         except Exception:
             logging.exception('During ai_dialogue something went wrong')
+
+    async def is_replied_to_bot_message(self, context: ContextTypes.DEFAULT_TYPE, msg):
+        is_replied_to_bot = False
+        bot_message = None
+        try:
+            is_replied_to_bot = msg.reply_to_message.from_user.id == context.bot.id
+            bot_message = msg.reply_to_message.text
+        except Exception:
+            ...
+        return is_replied_to_bot, bot_message
 
     async def query_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         query = update.callback_query
@@ -448,7 +475,7 @@ class SoulAIBot:
             case commands.SET_SYSTEM_MESSAGE:
                 await self.set_system_message(update, context)  # ToDo: implement
             case commands.ASK_KNOWLEDGE_GOD:
-                update.message.text = f"Hi!"
+                update.effective_message.text = f"Hi!"
                 await self.ask_knowledge_god(update, context)
             case SupportedModels.CHAT_GPT_3_5_TURBO_0301.value:
                 await self.set_model_callback(update, context)
@@ -456,7 +483,13 @@ class SoulAIBot:
                 await update.callback_query.answer(text="Sorry, I don't know what to do with this button")
 
 
-def get_normalized_chat_messages(chat: Chat, chat_session: ChatSession) -> t.Tuple[t.List[dict[t.Any, t.Any]], int]:
+def get_normalized_chat_messages(chat: Chat, chat_session: ChatSession, is_replied_to_bot=False,
+                                 bot_message=None) -> t.Tuple[t.List[dict[t.Any, t.Any]], int]:
+    if is_replied_to_bot:
+        last_message = chat.messages.pop()
+        last_message.content = f"{last_message.content} on response on your " \
+                               f"message which starts with {bot_message[:30]}"
+        chat.messages.append(last_message)
     chat_data = chat.dict()
     chat_messages = chat_data['messages']
     model: ChatModel = chat.open_ai_config.current_model
