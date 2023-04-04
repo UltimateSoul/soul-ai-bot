@@ -174,8 +174,7 @@ class DatastoreManager:
                     message_entity = datastore.Entity(exclude_from_indexes=list(message.keys()))  # noqa
                     message_entity.update(message)
                     chat_message_entities.append(message_entity)
-                chat_entity.update({
-                    "messages": chat_message_entities
-                })
+                data.pop("messages")
+                chat_entity.update(dict(messages=chat_message_entities, **data))
             self.client.put(chat_entity)
             return chat_entity, chat_key, is_created

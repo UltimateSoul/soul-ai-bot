@@ -254,14 +254,18 @@ class SoulAIBot:
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             system_message = ' '.join(update.message.text.split()[1:])
-            chat.system_message = Message(content=system_message,
-                                          role='system')
-            chat_session.set(chat.dict())
-            await context.bot.send_message(chat_id=update.effective_chat.id,
-                                           text='You have successfully set the system message!')
+            if len(system_message) > 20:
+                chat.system_message = Message(content=system_message,
+                                              role='system')
+                chat_session.set(chat.dict())
+                await context.bot.send_message(chat_id=update.effective_chat.id,
+                                               text='You have successfully set the system message!')
+            else:
+                await context.bot.send_message(chat_id=update.effective_chat.id,
+                                               text='Please, send me a larger system message (at least 20 characters)')
         except IndexError:
             await context.bot.send_message(chat_id=update.effective_chat.id,
-                                           text='Please send me a system message you want to set.')
+                                           text='Please send me a larger system message (at least 20 characters)')
 
         except Exception:
             logging.exception('Error in set_system_message')

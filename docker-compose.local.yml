@@ -28,7 +28,7 @@ services:
         context: .
         dockerfile: docker/tg-ai-bot/Dockerfile
     ports:
-      - "8000:8000"
+      - "8080:8080"
     restart: on-failure
     depends_on:
       - redis
