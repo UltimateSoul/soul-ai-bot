@@ -487,8 +487,8 @@ def get_normalized_chat_messages(chat: Chat, chat_session: ChatSession, is_repli
                                  bot_message=None) -> t.Tuple[t.List[dict[t.Any, t.Any]], int]:
     if is_replied_to_bot:
         last_message = chat.messages.pop()
-        last_message.content = f"{last_message.content} on response on your " \
-                               f"message which starts with {bot_message[:30]}"
+        intro, user_message = last_message.content.split(':', 1)
+        last_message.content = f"{intro}```{user_message}``` on your message which starts with ```{bot_message[:100]}```"
         chat.messages.append(last_message)
     chat_data = chat.dict()
     chat_messages = chat_data['messages']
