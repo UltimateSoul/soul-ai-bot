@@ -62,7 +62,7 @@ class ChatSession(Session):
         new_message = {
             'role': 'user',
             'content': f"{user_name} says:{self.update.effective_message.text}"
-        } if self.update.effective_message.text else None
+        } if not self.update.effective_message.text.startswith('/') else None
         if chat:
             chat_data: dict = json.loads(chat)
             logger.debug(f"ChatSession found in Redis: {chat_data}")

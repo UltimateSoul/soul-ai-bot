@@ -113,7 +113,7 @@ class SoulAIBot:
                                            text='Please, send me a message to get the number of tokens for it')
         else:
             try:
-                update.message.text = None
+                
                 chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
                 chat: Chat = chat_session.get()
                 system_message = chat.system_message
@@ -159,7 +159,7 @@ class SoulAIBot:
     async def set_max_tokens(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             max_tokens = int(update.message.text.split()[1])
-            update.message.text = None
+            
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             system_message = chat.system_message
@@ -193,7 +193,7 @@ class SoulAIBot:
     async def set_temperature(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             temperature = float(update.message.text.split()[1])
-            update.message.text = None
+            
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             if temperature < 0.0 or temperature > 1.0:
@@ -237,7 +237,7 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def set_model_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            update.message.text = None
+            
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             model = SupportedModels(update.callback_query.data)
@@ -256,7 +256,7 @@ class SoulAIBot:
     async def set_system_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             system_message = ' '.join(update.message.text.split()[1:])
-            update.message.text = None
+            
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             if len(system_message) > 20:
@@ -280,7 +280,7 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def get_system_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            update.message.text = None
+            
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             await context.bot.send_message(chat_id=update.effective_chat.id,
@@ -294,7 +294,7 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def clear_context(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            update.message.text = None
+            
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             chat.messages = []
