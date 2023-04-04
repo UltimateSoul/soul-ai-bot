@@ -439,7 +439,7 @@ class SoulAIBot:
                         await self.ask_knowledge_god(update, context, is_replied_to_bot, bot_message)
                     case ChatType.SUPERGROUP | ChatType.GROUP:
                         is_bot_was_mentioned = '@' + context.bot.username in msg.text
-                        if is_bot_was_mentioned:
+                        if is_bot_was_mentioned or is_replied_to_bot:
                             await self.ask_knowledge_god(update, context, is_replied_to_bot, bot_message)
         except Exception:
             logging.exception('During ai_dialogue something went wrong')
