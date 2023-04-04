@@ -20,4 +20,4 @@ COPY core .
 EXPOSE 8080
 
 # Set the entrypoint command to run the application using Gunicorn
-CMD ["uvicorn", "main:app", "--workers", "4", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "main:app", "--workers", "2", "--host", "0.0.0.0", "--port", "8080"]
