@@ -32,6 +32,7 @@ class DatastoreManager:
         query = self.client.query(kind=USER_ACCOUNT_KIND)
         query.add_filter('username', '=', username.replace("@", ""))
         for user in query.fetch(limit=1):
+            user.update({'current_balance': user['current_balance'] / DATASTORE_FLOAT_MULTIPLIER})
             return user
 
     def get_or_create_user_account_entity(self, data: t.Union[Update, dict]) -> t.Tuple[datastore.Entity, Key, bool]:
@@ -71,8 +72,7 @@ class DatastoreManager:
             user_key = self.client.key(
                 USER_ACCOUNT_KIND, user_id
             )
-            data['current_balance'] = data[
-                                          'current_balance'] * DATASTORE_FLOAT_MULTIPLIER  # datastore cant store floats
+            data['current_balance'] = data['current_balance'] * DATASTORE_FLOAT_MULTIPLIER
             user_entity = self.client.get(user_key)
 
             if not user_entity:

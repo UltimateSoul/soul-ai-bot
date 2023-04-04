@@ -113,6 +113,7 @@ class SoulAIBot:
                                            text='Please, send me a message to get the number of tokens for it')
         else:
             try:
+                update.message.text = None
                 chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
                 chat: Chat = chat_session.get()
                 system_message = chat.system_message
@@ -157,9 +158,10 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def set_max_tokens(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
+            max_tokens = int(update.message.text.split()[1])
+            update.message.text = None
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
-            max_tokens = int(update.message.text.split()[1])
             system_message = chat.system_message
             system_message_token_number = num_tokens_from_messages(messages=[system_message.dict()],
                                                                    model=chat.open_ai_config.current_model)
@@ -190,9 +192,10 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def set_temperature(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
+            temperature = float(update.message.text.split()[1])
+            update.message.text = None
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
-            temperature = float(update.message.text.split()[1])
             if temperature < 0.0 or temperature > 1.0:
                 await context.bot.send_message(chat_id=update.effective_chat.id,
                                                text='Please, send me a number between 0.0 and 1.0')
@@ -234,6 +237,7 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def set_model_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
+            update.message.text = None
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             model = SupportedModels(update.callback_query.data)
@@ -251,9 +255,10 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def set_system_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
+            system_message = ' '.join(update.message.text.split()[1:])
+            update.message.text = None
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
-            system_message = ' '.join(update.message.text.split()[1:])
             if len(system_message) > 20:
                 chat.system_message = Message(content=system_message,
                                               role='system')
@@ -275,6 +280,7 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def get_system_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
+            update.message.text = None
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             await context.bot.send_message(chat_id=update.effective_chat.id,
@@ -288,6 +294,7 @@ class SoulAIBot:
     @send_action(ChatAction.TYPING)
     async def clear_context(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
+            update.message.text = None
             chat_session = ChatSession(entity_id=update.effective_chat.id, update=update)
             chat: Chat = chat_session.get()
             chat.messages = []
@@ -340,7 +347,6 @@ class SoulAIBot:
                           "username": username})
             user_account: UserAccount = UserAccount(**user_account_entity)
             user_account.current_balance += 200
-            datastore_manager.update_or_create_user_account_entity(user_account.dict())
             user_session = UserSession(entity_id=mentioned_user_id, update=update)
             user_session.set(user_account.dict())
             await context.bot.send_message(chat_id=update.effective_chat.id,

@@ -58,15 +58,17 @@ class ChatSession(Session):
         user_name = f"{self.update.effective_user.first_name} {self.update.effective_user.last_name}"
         if not user_name:
             user_name = self.update.effective_user.username
+
         new_message = {
             'role': 'user',
             'content': f"{user_name} says:{self.update.effective_message.text}"
-        }
+        } if self.update.effective_message.text else None
         if chat:
             chat_data: dict = json.loads(chat)
             logger.debug(f"ChatSession found in Redis: {chat_data}")
-            chat_data["messages"].append(new_message)
-            self.set(chat_data)
+            if new_message:
+                chat_data["messages"].append(new_message)
+                self.set(chat_data)
             return Chat(**chat_data)
         logger.debug("ChatSession not found in Redis, getting it from the Datastore.")
         chat_entity, _, created = self.datastore_manager.get_or_create_chat_entity(self.update)
