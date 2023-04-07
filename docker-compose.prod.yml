@@ -34,10 +34,3 @@ services:
       - redis
     env_file:
       - .env
-  datastore:
-    image: 'google/cloud-sdk:latest'
-    command: gcloud beta emulators datastore start --host-port=0.0.0.0:8081
-    ports:
-      - '8081:8081'
-    env_file:
-      - .env
