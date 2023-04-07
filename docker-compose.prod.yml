@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  redis:
+    image: "redis:latest"
+    container_name: "redis-container"
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    restart: on-failure
+
+  listener:
+    container_name: "listener"
+    build:
+        context: .
+        dockerfile: docker/listener/Dockerfile
+    restart: on-failure
+    depends_on:
+      - redis
+    env_file:
+      - .env
+
+  tg-ai-bot:
+    container_name: "tg-ai-bot"
+    build:
+        context: .
+        dockerfile: docker/tg-ai-bot/Dockerfile
+    ports:
+      - "8080:8080"
+    restart: on-failure
+    depends_on:
+      - redis
+    env_file:
+      - .env
+  datastore:
+    image: 'google/cloud-sdk:latest'
+    command: gcloud beta emulators datastore start --host-port=0.0.0.0:8081
+    ports:
+      - '8081:8081'
+    env_file:
+      - .env
